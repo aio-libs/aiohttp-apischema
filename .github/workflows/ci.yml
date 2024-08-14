@@ -45,6 +45,7 @@ jobs:
 
   swagger_ui:
     name: Swagger UI
+    runs-on: ubuntu-latest
     steps:
     - name: Get current week for cache key
       id: get-date
