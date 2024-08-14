@@ -1,11 +1,15 @@
 import json
+import sys
 from concurrent.futures import Executor
-from typing import Generic, Literal, TypeVar, overload
+from typing import Generic, Literal, overload
 
 from aiohttp import web
 from aiohttp.typedefs import LooseHeaders
 
-from typing_extensions import TypeVar
+if sys.version_info >= (3, 13):
+    from typing import TypeVar
+else:
+    from typing_extensions import TypeVar
 
 _T = TypeVar("_T")
 _Status = TypeVar("_Status", bound=int, default=Literal[200])

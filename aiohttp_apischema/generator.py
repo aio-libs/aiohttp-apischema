@@ -1,18 +1,23 @@
 import functools
 import inspect
+import sys
 from collections.abc import Awaitable, Callable, Mapping
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import Any, Literal, Required, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
+from typing import Any, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
-from jinja2 import Template
 from pydantic import Json, TypeAdapter, ValidationError
 
 from aiohttp_apischema.response import APIResponse
+
+if sys.version_info >= (3, 11):
+    from typing import Required
+else:
+    from typing_extensions import Required
 
 OPENAPI_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
 
