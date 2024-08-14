@@ -53,7 +53,7 @@ Then decorate endpoint handlers which should be included in the schema:
     async def foo(request: web.Request) -> APIResponse[list[str], Literal[200]]:
         return APIResponse(["foo"])
 
-Or for `Class Based Views <https://aiohttp.readthedocs.io/en/stable/web_quickstart.html#class-based-views>`_:
+Or for `Class Based Views <https://aiohttp.readthedocs.io/en/stable/web_quickstart.html#class-based-views>`__:
 
 .. code-block:: python
 
