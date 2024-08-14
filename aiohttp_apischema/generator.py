@@ -9,7 +9,6 @@ from typing import Any, Literal, Required, TypedDict, TypeGuard, TypeVar, cast, 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
-from jinja2 import Template
 from pydantic import Json, TypeAdapter, ValidationError
 
 from aiohttp_apischema.response import APIResponse
