@@ -71,7 +71,7 @@ Then call the setup method when building your app:
 
     app = web.Application()
     app.router.add_get("/foo", foo)
-    app.router.add_view("/bar/{id:\d+}", Handler)
+    app.router.add_view(r"/bar/{id:\d+}", Handler)
     SCHEMA.setup(app)
 
 
