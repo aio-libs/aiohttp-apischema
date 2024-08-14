@@ -5,8 +5,6 @@ from typing import Generic, Literal, TypeVar, overload
 from aiohttp import web
 from aiohttp.typedefs import LooseHeaders
 
-from typing_extensions import TypeVar
-
 _T = TypeVar("_T")
 _Status = TypeVar("_Status", bound=int, default=Literal[200])
 
