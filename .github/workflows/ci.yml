@@ -79,11 +79,11 @@ jobs:
     needs: swagger_ui
     strategy:
       matrix:
-        pyver: ['3.12']
+        pyver: ['3.10', '3.11', '3.12']
         os: [ubuntu, macos, windows]
-        #include:
-        #  - pyver: pypy-3.10
-        #    os: ubuntu
+        include:
+          - pyver: pypy-3.10
+            os: ubuntu
     runs-on: ${{ matrix.os }}-latest
     timeout-minutes: 15
     steps:
