@@ -62,8 +62,7 @@ jobs:
       run: mkdir swagger-ui
     - name: Download/Unpack swagger-ui
       if: steps.cache.outputs.cache-hit != 'true'
-      run: curl -L $('curl -L https://api.github.com/repos/swagger-api/swagger-ui/releases?per_page=1 | jq -r .[0].tarball_url') | tar --wildcards --no-wildcards-match-slash -C swagger-ui -xz 'swagger-api-swagger-ui-*/dist/' --strip-components=2
-      shell: bash
+      run: curl -L $(curl -L 'https://api.github.com/repos/swagger-api/swagger-ui/releases?per_page=1' | jq -r .[0].tarball_url) | tar --wildcards --no-wildcards-match-slash -C swagger-ui -xz 'swagger-api-swagger-ui-*/dist/' --strip-components=2
     - name: Update URL
       if: steps.cache.outputs.cache-hit != 'true'
       run: |
