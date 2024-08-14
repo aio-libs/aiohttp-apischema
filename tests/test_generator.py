@@ -73,7 +73,7 @@ async def test_response(aiohttp_client: AiohttpClient) -> None:
         long
           description.
         """
-        return APIResponse((POLL1,))
+        return APIResponse((POLL1,))  # pragma: no cover
 
     app = web.Application()
     schema_gen.setup(app)
