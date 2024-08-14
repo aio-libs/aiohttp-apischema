@@ -2,7 +2,7 @@ aiohttp_apischema
 =================
 .. image:: https://github.com/aio-libs/aiohttp-apischema/workflows/CI/badge.svg
     :target: https://github.com/aio-libs/aiohttp-apischema/actions?query=workflow%3ACI
-.. image:: https://codecov.io/gh/aio-libs/aiohttp-jinja2/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/aio-libs/aiohttp-apischema/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/aio-libs/aiohttp-apischema
 .. image:: https://img.shields.io/pypi/v/aiohttp-apischema.svg
     :target: https://pypi.python.org/pypi/aiohttp-apischema
@@ -54,7 +54,7 @@ Then decorate endpoint handlers which should be included in the schema:
         return APIResponse(["foo"])
 
 Or for `Class Based Views
-<https://aiohttp.readthedocs.io/en/stable/web_quickstart.html#class-based-views>`:
+<https://aiohttp.readthedocs.io/en/stable/web_quickstart.html#class-based-views>`_:
 
 .. code-block:: python
 
