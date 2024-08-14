@@ -1,0 +1,11 @@
+include CHANGES.rst
+include LICENSE
+include README.rst
+include requirements-dev.txt
+include pytest.ini
+include .coveragerc
+graft aiohttp_apischema
+graft docs
+graft examples
+graft tests
+global-exclude *.pyc

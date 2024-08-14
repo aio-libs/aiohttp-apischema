@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aiohttp-apischema"
+dependencies = ["aiohttp>=3.9", "pydantic>=2"]
+description = "Generate a schema and validate user input from types"
+dynamic = ["version"]
+license = {file = "LICENSE"}
+readme = "README.rst"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Internet :: WWW/HTTP",
+    "Framework :: AsyncIO",
+    "Framework :: aiohttp",
+    "Development Status :: 2 - Pre-Alpha"
+]
+
+[project.urls]
+Homepage = "https://github.com/aio-libs/aiohttp-apischema"
+Issues = "https://github.com/aio-libs/aiohttp-apischema/issues"
+
+[tool.setuptools]
+packages = ["aiohttp_apischema"]
+
+[tool.setuptools.dynamic]
+version = {attr = "aiohttp_apischema.__version__"}
