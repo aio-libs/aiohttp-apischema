@@ -10,7 +10,7 @@ aiohttp_apischema
     :target: http://aiohttp-apischema.readthedocs.io/en/latest/?badge=latest
 
 
-API schema generation and input validation for aiohttp.
+API schema generation and input validation for `aiohttp.web`__.
 
 
 .. _aiohttp_web: https://aiohttp.readthedocs.io/en/latest/web.html
