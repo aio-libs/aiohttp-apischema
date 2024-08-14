@@ -91,8 +91,8 @@ class PollView(web.View):
 def init_app() -> web.Application:
     app = web.Application()
     app.router.add_get("/polls", list_polls)
-    app.router.add_view("/poll/{id:\d+}", PollView)
-    app.router.add_put("/poll/{id:\d+}/choice", add_choice)
+    app.router.add_view(r"/poll/{id:\d+}", PollView)
+    app.router.add_put(r"/poll/{id:\d+}/choice", add_choice)
 
     SCHEMA.setup(app)
 
