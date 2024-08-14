@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aiohttp-apischema"
-dependencies = ["aiohttp>=3.9", "pydantic>=2"]
+dependencies = ["aiohttp>=3.9", "pydantic>=2", 'typing-extensions ; python_version < "3.13"']
 description = "Generate a schema and validate user input from types"
 dynamic = ["version"]
 license = {file = "LICENSE"}
