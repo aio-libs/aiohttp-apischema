@@ -1,4 +1,4 @@
-aiohttp_apischema
+aiohttp-apischema
 =================
 
 .. currentmodule:: aiohttp_apischema
