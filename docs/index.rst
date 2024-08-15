@@ -30,7 +30,7 @@ the return type:
     async def foo(request: web.Request) -> APIResponse[list[str], Literal[200]]:
         return APIResponse(["foo"])
 
-Or for `Class Based Views <https://aiohttp.readthedocs.io/en/stable/web_quickstart.html#class-based-views>`_
+Or for :ref:`Class Based Views <aiohttp:aiohttp-web-class-based-views>`
 the :meth:`aiohttp_apischema.SchemaGenerator.api_view` decorator can be used:
 
 .. code-block:: python
