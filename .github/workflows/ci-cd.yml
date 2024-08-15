@@ -130,10 +130,13 @@ jobs:
 
   deploy:
     name: Deploy
-    environment: release
+    environment: pypi
     runs-on: ubuntu-latest
     needs: [check, swagger_ui]
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    permissions:
+      contents: write  # GitHub Releases
+      id-token: write  # Trusted publishing & sigstore
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -159,7 +162,9 @@ jobs:
         name: aiohttp-apischema
         version_file: aiohttp_apischema/__init__.py
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        pypi_token: ${{ secrets.PYPI_API_TOKEN }}
         dist_dir: dist
         fix_issue_regex: "`#(\\d+) <https://github.com/aio-libs/aiohttp-apischema/issues/\\1>`"
         fix_issue_repl: "(#\\1)"
+    - name: >-
+        Publish 🐍📦 to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
