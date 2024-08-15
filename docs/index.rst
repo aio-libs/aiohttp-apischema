@@ -91,7 +91,9 @@ You can use docstrings to customise the summary and description shown in the sch
 Library Installation
 --------------------
 
-The :mod:`aiohttp_apischema` library can be installed with pip::
+The :mod:`aiohttp_apischema` library can be installed with pip:
+
+.. code-block:: sh
 
    $ pip install aiohttp-apischema
 
