@@ -93,7 +93,7 @@ Library Installation
 
 The :mod:`aiohttp_apischema` library can be installed with pip::
 
-   $ pip install aiohttp_apischema
+   $ pip install aiohttp-apischema
 
 Source code
 -----------
