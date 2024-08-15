@@ -1,4 +1,4 @@
-aiohttp_apischema
+aiohttp-apischema
 =================
 .. image:: https://github.com/aio-libs/aiohttp-apischema/workflows/CI/badge.svg
     :target: https://github.com/aio-libs/aiohttp-apischema/actions?query=workflow%3ACI
