@@ -124,7 +124,7 @@ html_theme_options = {
     "logo": "aiohttp-icon.svg",
     "description": "API schema generation and input validation for aiohttp",
     "github_user": "aio-libs",
-    "github_repo": "aiohttp_apischema",
+    "github_repo": "aiohttp-apischema",
     "github_button": True,
     "github_banner": True,
     "pre_bg": "#FFF6E5",
