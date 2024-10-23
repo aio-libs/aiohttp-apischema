@@ -1,4 +1,4 @@
 -r requirements.txt
 
-mypy==1.12.1
+mypy==1.13.0
 sphinx==8.1.3
