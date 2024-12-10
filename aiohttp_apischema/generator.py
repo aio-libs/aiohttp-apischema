@@ -84,7 +84,7 @@ class _OperationObject(TypedDict, total=False):
     requestBody: _RequestBodyObject
     responses: dict[str, _ResponseObject]
     summary: str
-    tags: List[str]
+    tags: list[str]
 
 class _PathObject(TypedDict, total=False):
     delete: _OperationObject
