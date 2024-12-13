@@ -144,7 +144,7 @@ class SchemaGenerator:
             info = {"title": "API", "version": "1.0"}
         self._openapi: _OpenApi = {"openapi": "3.1.0", "info": info}
 
-    def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags=[]) -> _EndpointData:
+    def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: Iterable[str] = ()) -> _EndpointData:
         ep_data: _EndpointData = {}
         docs = inspect.getdoc(handler)
         if docs:
@@ -156,7 +156,7 @@ class SchemaGenerator:
             if desc:
                 ep_data["desc"] = desc
             if tags:
-                ep_data["tags"] = tags
+                ep_data["tags"] = list(tags)
 
         sig = inspect.signature(handler, eval_str=True)
         params = iter(sig.parameters.values())
@@ -213,7 +213,7 @@ class SchemaGenerator:
 
         return decorator
 
-    def api(self, tags=[]) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
+    def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=tags)
             ta = ep_data.get("body")
