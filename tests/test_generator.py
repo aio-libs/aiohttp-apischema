@@ -247,3 +247,27 @@ async def test_view(aiohttp_client: AiohttpClient) -> None:
         assert len(result) == 1
         assert result[0]["loc"] == ["choices"]
         assert result[0]["type"] == "too_short"
+
+
+async def test_tags(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    _tags = ["a_tag"]
+
+    @schema_gen.api(tags=_tags)
+    async def get_number(
+        request: web.Request,
+    ) -> APIResponse[tuple[Poll, ...], Literal[200]]:
+        """Number."""
+        return APIResponse((POLL1,))  # pragma: no cover
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/number", get_number)
+
+    client = await aiohttp_client(app)
+    async with client.get("/schema") as resp:
+        assert resp.ok
+        schema = await resp.json()
+
+    assert schema["paths"]["/number"]["get"]["tags"] == _tags
