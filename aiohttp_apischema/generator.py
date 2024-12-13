@@ -145,7 +145,7 @@ class SchemaGenerator:
             info = {"title": "API", "version": "1.0"}
         self._openapi: _OpenApi = {"openapi": "3.1.0", "info": info}
 
-    def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: Collection[str] = ()) -> _EndpointData:
+    def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: list[str]) -> _EndpointData:
         ep_data: _EndpointData = {}
         docs = inspect.getdoc(handler)
         if docs:
@@ -188,7 +188,7 @@ class SchemaGenerator:
 
         return ep_data
 
-    def api_view(self) -> Callable[[type[_View]], type[_View]]:
+    def api_view(self, tags: Collection[str] = ()) -> Callable[[type[_View]], type[_View]]:
         def decorator(view: type[_View]) -> type[_View]:
             self._endpoints[view] = {"meths": {}}
 
@@ -204,7 +204,7 @@ class SchemaGenerator:
 
             methods = ((getattr(view, m), m) for m in map(str.lower, METH_ALL) if hasattr(view, m))
             for func, method in methods:
-                ep_data = self._save_handler(func)
+                ep_data = self._save_handler(func, tags=list(tags))
                 self._endpoints[view]["meths"][method] = ep_data
                 ta = ep_data.get("body")
                 if ta:
@@ -216,7 +216,7 @@ class SchemaGenerator:
 
     def api(self, tags: Collection[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
-            ep_data = self._save_handler(handler, tags=tags)
+            ep_data = self._save_handler(handler, tags=list(tags))
             ta = ep_data.get("body")
             if ta:
                 @functools.wraps(handler)
