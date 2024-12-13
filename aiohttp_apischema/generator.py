@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import Any, Collection, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
+from typing import Any, Iterable, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
@@ -157,7 +157,7 @@ class SchemaGenerator:
             if desc:
                 ep_data["desc"] = desc
             if tags:
-                ep_data["tags"] = list(tags)
+                ep_data["tags"] = tags
 
         sig = inspect.signature(handler, eval_str=True)
         params = iter(sig.parameters.values())
@@ -188,7 +188,7 @@ class SchemaGenerator:
 
         return ep_data
 
-    def api_view(self, tags: Collection[str] = ()) -> Callable[[type[_View]], type[_View]]:
+    def api_view(self, tags: Iterable[str] = ()) -> Callable[[type[_View]], type[_View]]:
         def decorator(view: type[_View]) -> type[_View]:
             self._endpoints[view] = {"meths": {}}
 
@@ -214,7 +214,7 @@ class SchemaGenerator:
 
         return decorator
 
-    def api(self, tags: Collection[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
+    def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
             ta = ep_data.get("body")
