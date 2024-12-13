@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import Any, Iterable, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
+from typing import Any, Collection, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
@@ -59,6 +59,7 @@ class _EndpointData(TypedDict, total=False):
     desc: str
     resps: dict[int, TypeAdapter[Any]]
     summary: str
+    tags: list[str]
 
 class _Endpoint(TypedDict, total=False):
     desc: str
@@ -144,7 +145,7 @@ class SchemaGenerator:
             info = {"title": "API", "version": "1.0"}
         self._openapi: _OpenApi = {"openapi": "3.1.0", "info": info}
 
-    def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: Iterable[str] = ()) -> _EndpointData:
+    def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: Collection[str] = ()) -> _EndpointData:
         ep_data: _EndpointData = {}
         docs = inspect.getdoc(handler)
         if docs:
@@ -213,7 +214,7 @@ class SchemaGenerator:
 
         return decorator
 
-    def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
+    def api(self, tags: Collection[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=tags)
             ta = ep_data.get("body")
