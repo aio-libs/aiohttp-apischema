@@ -252,9 +252,9 @@ async def test_view(aiohttp_client: AiohttpClient) -> None:
 async def test_tags(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
-    _tags = ["a_tag"]
+    tags = ("a_tag", "b_tag")
 
-    @schema_gen.api(tags=_tags)
+    @schema_gen.api(tags=tags)
     async def get_number(
         request: web.Request,
     ) -> APIResponse[tuple[Poll, ...], Literal[200]]:
@@ -270,4 +270,4 @@ async def test_tags(aiohttp_client: AiohttpClient) -> None:
         assert resp.ok
         schema = await resp.json()
 
-    assert schema["paths"]["/number"]["get"]["tags"] == _tags
+    assert schema["paths"]["/number"]["get"]["tags"] == ["a_tag", "b_tag"]
