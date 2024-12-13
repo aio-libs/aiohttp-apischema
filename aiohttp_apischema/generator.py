@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import Any, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
+from typing import Any, Iterable, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
