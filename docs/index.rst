@@ -88,17 +88,6 @@ You can use docstrings to customise the summary and description shown in the sch
         description.
         """
 
-Group endpoints using tags
-++++++++++++++++++++++++++
-
-Both :code:`api` and :code:`api_view` decorators allow to specify endpoint tags which group endpoints in the schema:
-
-.. code-block:: python
-
-    @SCHEMA.api(tags=["Bar"])
-    async def foo(request: web.Request) -> APIResponse[list[str], Literal[200]]:
-        return APIResponse(["foo"])
-
 Library Installation
 --------------------
 
