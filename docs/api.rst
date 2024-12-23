@@ -43,7 +43,7 @@ SchemaGenerator
       in the schema. When the handler is executed, the request body will be read and
       validated against that type.
 
-      :param tags: Iterable object used to specify tags to group endpoints.
+      :param tags: Sequence of strings used to specify tags to group endpoints.
 
                    By default the value is ``()``.
 
@@ -54,7 +54,7 @@ SchemaGenerator
 
       See :meth:`SchemaGenerator.api` for more information.
 
-      :param tags: Iterable object used to specify tags to group endpoints.
+      :param tags: Sequence of strings used to specify tags to group endpoints.
 
                    By default the value is ``()``.
 
