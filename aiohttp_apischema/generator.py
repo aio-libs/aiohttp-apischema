@@ -5,7 +5,8 @@ from collections.abc import Awaitable, Callable, Mapping
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import Any, Iterable, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
+from typing import (Any, Generic, Iterable, Literal, Protocol, TypedDict, TypeGuard, TypeVar,
+                    cast, get_args, get_origin, get_type_hints)
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
@@ -22,13 +23,29 @@ else:
 OPENAPI_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
 
 _T = TypeVar("_T")
-_Resp = TypeVar("_Resp", bound=APIResponse[Any, Any])
+_U = TypeVar("_U")
+_Query = TypeVar("_Query", bound=dict[str, object] | None, contravariant=True)
+_Resp = TypeVar("_Resp", bound=APIResponse[Any, Any], covariant=True)
 _View = TypeVar("_View", bound=web.View)
+OpenAPIMethod = Literal["get", "put", "post", "delete", "options", "head", "patch", "trace"]
+__ModelKey = tuple[str, OpenAPIMethod, _T, _U]
+_ModelKey = (
+    __ModelKey[Literal["requestBody"], None]
+    | __ModelKey[Literal["parameter"], tuple[str, bool]]
+    | __ModelKey[Literal["response"], int]
+)
+
+class _APIHandler(Protocol, Generic[_Resp]):
+    def __call__(self, request: web.Request, *, query: Any) -> Awaitable[_Resp]:
+        ...
+
+
 APIHandler = (
     Callable[[web.Request], Awaitable[_Resp]]
     | Callable[[web.Request, Any], Awaitable[_Resp]]
+    | _APIHandler[_Resp]
 )
-OpenAPIMethod = Literal["get", "put", "post", "delete", "options", "head", "patch", "trace"]
+
 
 class Contact(TypedDict, total=False):
     name: str
@@ -57,6 +74,7 @@ class Info(TypedDict, total=False):
 class _EndpointData(TypedDict, total=False):
     body: TypeAdapter[object]
     desc: str
+    params: Required[dict[str, tuple[TypeAdapter[object], bool]]]
     resps: dict[int, TypeAdapter[Any]]
     summary: str
     tags: list[str]
@@ -72,6 +90,16 @@ class _Components(TypedDict, total=False):
 class _MediaTypeObject(TypedDict, total=False):
     schema: object
 
+# in is a reserved keyword.
+_ParameterObject = TypedDict("_ParameterObject", {
+    "deprecated": bool,
+    "description": str,
+    "name": Required[str],
+    "in": Required[Literal["query", "header", "path", "cookie"]],
+    "required": bool,
+    "schema": object
+}, total=False)
+
 class _RequestBodyObject(TypedDict, total=False):
     content: Required[dict[str, _MediaTypeObject]]
 
@@ -82,6 +110,7 @@ class _ResponseObject(TypedDict, total=False):
 class _OperationObject(TypedDict, total=False):
     description: str
     operationId: str
+    parameters: list[_ParameterObject]
     requestBody: _RequestBodyObject
     responses: dict[str, _ResponseObject]
     summary: str
@@ -146,7 +175,7 @@ class SchemaGenerator:
         self._openapi: _OpenApi = {"openapi": "3.1.0", "info": info}
 
     def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: list[str]) -> _EndpointData:
-        ep_data: _EndpointData = {}
+        ep_data: _EndpointData = {"params": {}}
         docs = inspect.getdoc(handler)
         if docs:
             summary, *descs = docs.split("\n", maxsplit=1)
@@ -172,6 +201,13 @@ class SchemaGenerator:
         else:
             if body.kind in {body.POSITIONAL_ONLY, body.POSITIONAL_OR_KEYWORD}:
                 ep_data["body"] = TypeAdapter(Json[body.annotation])  # type: ignore[misc,name-defined]
+
+        query_param = sig.parameters.get("query")
+        if query_param and query_param.kind is query_param.KEYWORD_ONLY:
+            # We need separate schemas for each key of the TypedDict
+            for key, typ in get_type_hints(query_param.annotation).items():
+                required = key in query_param.annotation.__required_keys__
+                ep_data["params"][key] = (TypeAdapter(Json[query_param.annotation]), required)  # type: ignore[misc,name-defined]
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
@@ -240,7 +276,7 @@ class SchemaGenerator:
 
     async def _on_startup(self, app: web.Application) -> None:
         #assert app.router.frozen
-        models: list[tuple[tuple[str, OpenAPIMethod, int | Literal["requestBody"]], Literal["serialization", "validation"], TypeAdapter[object]]] = []
+        models: list[tuple[_ModelKey, Literal["serialization", "validation"], TypeAdapter[object]]] = []
         paths: dict[str, _PathObject] = {}
         for route in app.router.routes():
             ep_data = self._endpoints.get(route.handler)
@@ -281,12 +317,15 @@ class SchemaGenerator:
                 path_data[method] = operation
 
                 body = endpoints.get("body")
-                key: tuple[str, OpenAPIMethod, int | Literal["requestBody"]]
+                key: _ModelKey
                 if body:
-                    key = (path, method, "requestBody")
+                    key = (path, method, "requestBody", None)
                     models.append((key, "validation", body))
+                for param_name, (param_type, required) in endpoints["params"].items():
+                    key = (path, method, "parameter", (param_name, required))
+                    models.append((key, "validation", param_type))
                 for code, model in endpoints["resps"].items():
-                    key = (path, method, code)
+                    key = (path, method, "response", code)
                     models.append((key, "serialization", model))
 
         elems, defs = TypeAdapter.json_schemas(models, ref_template="#/components/schemas/{model}")
@@ -294,17 +333,27 @@ class SchemaGenerator:
             self._openapi["components"] = {"schemas": defs["$defs"]}
 
         # TODO: default response
-        for ((path, method, code_or_key), mode), schema in elems.items():
-            if code_or_key == "requestBody":
+        key_type: str
+        for (key, mode), schema in elems.items():
+            if key[2] == "requestBody":
+                path, method, key_type, _ = key
                 assert mode == "validation"
-                paths[path][method][code_or_key] = {"content": {"application/json": {"schema": schema}}}
+                paths[path][method]["requestBody"] = {"content": {"application/json": {"schema": schema}}}
+            elif key[2] == "parameter":
+                path, method, key_type, (param_name, required) = key
+                assert mode == "validation"
+                parameter: _ParameterObject = {
+                    "name": param_name, "in": "query", "required": required, "schema": schema}
+                paths[path][method].setdefault("parameters", []).append(parameter)
             else:
-                assert isinstance(code_or_key, int)
+                path, method, key_type, code = key
+                assert key_type == "response"
+                assert isinstance(code, int)
                 assert mode == "serialization"
                 responses = paths[path][method].setdefault("responses", {})
                 content: dict[str, _MediaTypeObject] = {"application/json": {"schema": schema}}
-                reason = HTTPStatus(code_or_key).phrase
-                responses[str(code_or_key)] = {"description": reason, "content": content}
+                reason = HTTPStatus(code).phrase
+                responses[str(code)] = {"description": reason, "content": content}
         if paths:
             self._openapi["paths"] = paths
 

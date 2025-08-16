@@ -1,3 +1,5 @@
+import json
+import sys
 from datetime import datetime
 from typing import Annotated, Literal
 
@@ -6,6 +8,9 @@ from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp_apischema import APIResponse, SchemaGenerator
 from aiohttp_apischema.generator import Contact, Info, License
 from pydantic import Field
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
 
 
 from typing_extensions import TypedDict
@@ -271,3 +276,60 @@ async def test_tags(aiohttp_client: AiohttpClient) -> None:
         schema = await resp.json()
 
     assert schema["paths"]["/number"]["get"]["tags"] == ["a_tag", "b_tag"]
+
+async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    class Baz(TypedDict):
+        foo: str
+
+    class QueryArgs(TypedDict):
+        foo: int
+        bar: NotRequired[tuple[str, int, float]]
+        baz: Baz
+
+    @schema_gen.api()
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        assert isinstance(query["foo"], int)
+        assert query["bar"] == ("spam", 42, 1.414)
+        assert query["baz"]["foo"] == "eggs"
+        return APIResponse(query["foo"])
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/foo", handler)
+
+    client = await aiohttp_client(app)
+    async with client.get("/schema") as resp:
+        assert resp.ok
+        schema = await resp.json()
+
+    paths = {"/foo": {"get": {
+        "operationId": "foo",
+        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {"$ref": "#/components/schemas/foo"}},
+                       {"name": "bar", "in": "query", "schema": {"$ref": "#/components/schemas/bar"}},
+                       {"name": "baz", "in": "query", "required": True, "schema": {"$ref": "#/components/schemas/baz"}}],
+        "responses": {
+            "200": {
+                "content": {"application/json": {"schema": {"type": "integer"}}},
+                "description": "Created"}}}}}
+    assert schema["paths"] == paths
+    baz = {"properties": {"foo": {"type": "string"}}, "required": ["foo"], "title": "Baz",
+           "type": "object"}
+    assert schema["components"]["schemas"]["foo"] == {"type": "integer"}
+    assert schema["components"]["schemas"]["bar"] == {"type": "array"}
+    assert schema["components"]["schemas"]["baz"] == baz
+
+    params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"})}
+    async with client.get("/foo", params=params) as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == 12
+
+async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    @schema_gen.api()  # type: ignore[arg-type]
+    async def foo(request: web.Request, *, foo: int) -> APIResponse[int]:
+        """Test static typing error occurs in mypy."""
+        return APIResponse(0)
