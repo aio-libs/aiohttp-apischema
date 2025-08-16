@@ -331,6 +331,7 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
 
     params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"})}
     async with client.get("/foo", params=params) as resp:
+        print(await resp.read())
         assert resp.status == 200
         result = await resp.json()
         assert result == 12
