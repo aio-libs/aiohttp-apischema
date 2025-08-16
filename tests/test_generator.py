@@ -321,7 +321,10 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
                        {"name": "baz", "in": "query", "required": True, "schema": {
                             "contentMediaType": "application/json",
                             "contentSchema": {"$ref": "#/components/schemas/Baz"},
-                            "type": "string"}},],
+                            "type": "string"}},
+                       {"name": "spam", "in": "query", "required": True, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "string"}, "type": "string"}}],
         "responses": {
             "200": {
                 "content": {"application/json": {"schema": {"type": "integer"}}},
