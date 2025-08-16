@@ -289,12 +289,14 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
         foo: int
         bar: NotRequired[tuple[str, int, float]]
         baz: Baz
+        spam: str
 
     @schema_gen.api()
     async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
         assert isinstance(query["foo"], int)
         assert query["bar"] == ("spam", 42, 1.414)
         assert query["baz"]["foo"] == "eggs"
+        assert query["spam"] == "eggz"
         return APIResponse(query["foo"])
 
     app = web.Application()
@@ -329,7 +331,7 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
            "title": "Baz", "type": "object"}
     assert schema["components"]["schemas"]["Baz"] == baz
 
-    params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"})}
+    params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"}), "spam": "eggz"}
     async with client.get("/foo", params=params) as resp:
         print(await resp.read())
         assert resp.status == 200

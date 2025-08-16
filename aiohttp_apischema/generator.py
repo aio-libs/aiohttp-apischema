@@ -207,7 +207,7 @@ class SchemaGenerator:
         query_param = sig.parameters.get("query")
         if query_param and query_param.kind is query_param.KEYWORD_ONLY:
             ep_data["query"] = query_param.annotation
-            ep_data["query_ta"] = TypeAdapter(Json[query_param.annotation])  # type: ignore[misc,name-defined]
+            ep_data["query_ta"] = TypeAdapter(query_param.annotation)  # type: ignore[name-defined]
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
