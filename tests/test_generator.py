@@ -327,9 +327,9 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
     assert schema["paths"] == paths
     baz = {"properties": {"foo": {"type": "string"}}, "required": ["foo"], "title": "Baz",
            "type": "object"}
-    assert schema["components"]["schemas"]["foo"] == {"type": "integer"}
-    assert schema["components"]["schemas"]["bar"] == {"type": "array"}
-    assert schema["components"]["schemas"]["baz"] == baz
+    assert schema["components"]["schemas"]["Foo"] == {"type": "integer"}
+    assert schema["components"]["schemas"]["Bar"] == {"type": "array"}
+    assert schema["components"]["schemas"]["Baz"] == baz
 
     params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"})}
     async with client.get("/foo", params=params) as resp:
