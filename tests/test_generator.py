@@ -307,14 +307,23 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
         schema = await resp.json()
 
     paths = {"/foo": {"get": {
-        "operationId": "foo",
-        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {"$ref": "#/components/schemas/foo"}},
-                       {"name": "bar", "in": "query", "schema": {"$ref": "#/components/schemas/bar"}},
-                       {"name": "baz", "in": "query", "required": True, "schema": {"$ref": "#/components/schemas/baz"}}],
+        "operationId": "handler",
+        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"$ref": "#/components/schemas/QueryArgs"},
+                            "type": "string"}},
+                       {"name": "bar", "in": "query", "required": False, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"$ref": "#/components/schemas/QueryArgs"},
+                            "type": "string"}},
+                       {"name": "baz", "in": "query", "required": True, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"$ref": "#/components/schemas/QueryArgs"},
+                            "type": "string"}},],
         "responses": {
             "200": {
                 "content": {"application/json": {"schema": {"type": "integer"}}},
-                "description": "Created"}}}}}
+                "description": "OK"}}}}}
     assert schema["paths"] == paths
     baz = {"properties": {"foo": {"type": "string"}}, "required": ["foo"], "title": "Baz",
            "type": "object"}
