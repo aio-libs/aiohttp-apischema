@@ -207,7 +207,7 @@ class SchemaGenerator:
             # We need separate schemas for each key of the TypedDict
             for key, typ in get_type_hints(query_param.annotation).items():
                 required = key in query_param.annotation.__required_keys__
-                ep_data["params"][key] = (TypeAdapter(Json[query_param.annotation]), required)  # type: ignore[misc,name-defined]
+                ep_data["params"][key] = (TypeAdapter(Json[typ]), required)  # type: ignore[misc,name-defined]
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
