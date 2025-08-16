@@ -244,6 +244,7 @@ class SchemaGenerator:
                 self._endpoints[view]["meths"][method] = ep_data
                 ta = ep_data.get("body")
                 if ta:
+                    # TODO
                     setattr(view, method, create_view_wrapper(func, ta))
 
             return view
@@ -253,6 +254,7 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
+            print(ep_data)
             if {"body", "params"} & ep_data.keys():  # We need to mutate function signature.
                 @functools.wraps(handler)
                 async def wrapper(request: web.Request) -> _Resp:  # type: ignore[misc]
