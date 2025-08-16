@@ -11,6 +11,8 @@ from pydantic import Field
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
 
 
 from typing_extensions import TypedDict
