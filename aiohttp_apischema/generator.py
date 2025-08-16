@@ -2,6 +2,7 @@ import functools
 import inspect
 import sys
 from collections.abc import Awaitable, Callable, Mapping
+from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
@@ -74,7 +75,8 @@ class Info(TypedDict, total=False):
 class _EndpointData(TypedDict, total=False):
     body: TypeAdapter[object]
     desc: str
-    params: Required[dict[str, tuple[TypeAdapter[object], bool]]]
+    query: dict[str, object]
+    query_ta: TypeAdapter[dict[str, object]]
     resps: dict[int, TypeAdapter[Any]]
     summary: str
     tags: list[str]
@@ -175,7 +177,7 @@ class SchemaGenerator:
         self._openapi: _OpenApi = {"openapi": "3.1.0", "info": info}
 
     def _save_handler(self, handler: APIHandler[APIResponse[object, int]], tags: list[str]) -> _EndpointData:
-        ep_data: _EndpointData = {"params": {}}
+        ep_data: _EndpointData = {}
         docs = inspect.getdoc(handler)
         if docs:
             summary, *descs = docs.split("\n", maxsplit=1)
@@ -204,10 +206,8 @@ class SchemaGenerator:
 
         query_param = sig.parameters.get("query")
         if query_param and query_param.kind is query_param.KEYWORD_ONLY:
-            # We need separate schemas for each key of the TypedDict
-            for key, typ in get_type_hints(query_param.annotation).items():
-                required = key in query_param.annotation.__required_keys__
-                ep_data["params"][key] = (TypeAdapter(Json[typ]), required)  # type: ignore[misc,name-defined]
+            ep_data["query"] = query_param.annotation
+            ep_data["query_ta"] = TypeAdapter(Json[query_param.annotation])  # type: ignore[misc,name-defined]
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
@@ -253,17 +253,26 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            ta = ep_data.get("body")
-            if ta:
+            if {"body", "params"} & ep_data.keys():  # We need to mutate function signature.
                 @functools.wraps(handler)
                 async def wrapper(request: web.Request) -> _Resp:  # type: ignore[misc]
-                    nonlocal handler
-                    try:
-                        request_body = ta.validate_python(await request.read())
-                    except ValidationError as e:
-                        raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
-                    handler = cast(Callable[[web.Request, Any], Awaitable[_Resp]], handler)
-                    return await handler(request, request_body)
+                    inner_handler: Callable[..., Awaitable[_Resp]] = partial(handler, request)
+
+                    if body_ta := ep_data.get("body"):
+                        try:
+                            request_body = body_ta.validate_python(await request.read())
+                        except ValidationError as e:
+                            raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
+                        inner_handler = partial(inner_handler, request_body)
+
+                    if query_ta := ep_data.get("query_ta"):
+                        try:
+                            query = query_ta.validate_python(request.query)
+                        except ValidationError as e:
+                            raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
+                        inner_handler = partial(inner_handler, query=query)
+
+                    return await inner_handler()
 
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
@@ -321,9 +330,12 @@ class SchemaGenerator:
                 if body:
                     key = (path, method, "requestBody", None)
                     models.append((key, "validation", body))
-                for param_name, (param_type, required) in endpoints["params"].items():
-                    key = (path, method, "parameter", (param_name, required))
-                    models.append((key, "validation", param_type))
+                if query := endpoints.get("query"):
+                    # We need separate schemas for each key of the TypedDict
+                    for param_name, param_type in get_type_hints(query).items():
+                        required = param_name in query.__required_keys__  # type: ignore[attr-defined]
+                        key = (path, method, "parameter", (param_name, required))
+                        models.append((key, "validation", TypeAdapter(Json[param_type])))  # type: ignore[misc,valid-type]
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
