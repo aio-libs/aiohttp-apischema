@@ -306,19 +306,19 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
         assert resp.ok
         schema = await resp.json()
 
+    bar = {"maxItems": 3, "minItems": 3, "type": "array",
+           "prefixItems": [{"type": "string"}, {"type": "integer"}, {"type": "number"}]}
     paths = {"/foo": {"get": {
         "operationId": "handler",
         "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {
                             "contentMediaType": "application/json",
-                            "contentSchema": {"$ref": "#/components/schemas/QueryArgs"},
-                            "type": "string"}},
+                            "contentSchema": {"type": "integer"}, "type": "string"}},
                        {"name": "bar", "in": "query", "required": False, "schema": {
                             "contentMediaType": "application/json",
-                            "contentSchema": {"$ref": "#/components/schemas/QueryArgs"},
-                            "type": "string"}},
+                            "contentSchema": bar, "type": "string"}},
                        {"name": "baz", "in": "query", "required": True, "schema": {
                             "contentMediaType": "application/json",
-                            "contentSchema": {"$ref": "#/components/schemas/QueryArgs"},
+                            "contentSchema": {"$ref": "#/components/schemas/Baz"},
                             "type": "string"}},],
         "responses": {
             "200": {
@@ -327,8 +327,6 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
     assert schema["paths"] == paths
     baz = {"properties": {"foo": {"type": "string"}}, "required": ["foo"], "title": "Baz",
            "type": "object"}
-    assert schema["components"]["schemas"]["Foo"] == {"type": "integer"}
-    assert schema["components"]["schemas"]["Bar"] == {"type": "array"}
     assert schema["components"]["schemas"]["Baz"] == baz
 
     params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"})}
