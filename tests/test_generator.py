@@ -324,6 +324,7 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
             "200": {
                 "content": {"application/json": {"schema": {"type": "integer"}}},
                 "description": "OK"}}}}}
+    print(schema["components"]["schemas"])
     assert schema["paths"] == paths
     baz = {"properties": {"foo": {"type": "string"}}, "required": ["foo"], "title": "Baz",
            "type": "object"}
