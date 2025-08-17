@@ -210,7 +210,7 @@ class SchemaGenerator:
         if query_param and query_param.kind is query_param.KEYWORD_ONLY:
             ep_data["query"] = query_param.annotation
             # We need to interpret dict values as JSON.
-            tr = validate_as(dict[str, str]).transform(lambda d: {k: json.loads(v) for k,v in d.items())
+            tr = validate_as(dict[str, str]).transform(lambda d: {k: json.loads(v) for k,v in d.items()})
             ep_data["query_ta"] = TypeAdapter(tr.validate_as(query_param.annotation))
 
         ep_data["resps"] = {}
