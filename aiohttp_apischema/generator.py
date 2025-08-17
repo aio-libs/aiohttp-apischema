@@ -1,5 +1,6 @@
 import functools
 import inspect
+import json
 import sys
 from collections.abc import Awaitable, Callable, Mapping
 from functools import partial
@@ -13,6 +14,7 @@ from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
 from pydantic import Json, TypeAdapter, ValidationError
+from pydantic.experimental.pipeline import validate_as
 
 from aiohttp_apischema.response import APIResponse
 
@@ -207,7 +209,9 @@ class SchemaGenerator:
         query_param = sig.parameters.get("query")
         if query_param and query_param.kind is query_param.KEYWORD_ONLY:
             ep_data["query"] = query_param.annotation
-            ep_data["query_ta"] = TypeAdapter(query_param.annotation)
+            # We need to interpret dict values as JSON.
+            tr = validate_as(dict[str, str]).transform(lambda d: {k: json.loads(v) for k,v in d.items())
+            ep_data["query_ta"] = TypeAdapter(tr.validate_as(query_param.annotation))
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
