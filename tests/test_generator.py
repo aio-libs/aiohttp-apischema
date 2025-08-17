@@ -279,7 +279,7 @@ async def test_tags(aiohttp_client: AiohttpClient) -> None:
 
     assert schema["paths"]["/number"]["get"]["tags"] == ["a_tag", "b_tag"]
 
-async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
+async def test_query(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
     class Baz(TypedDict):
@@ -334,7 +334,8 @@ async def test_query_typeddict(aiohttp_client: AiohttpClient) -> None:
            "title": "Baz", "type": "object"}
     assert schema["components"]["schemas"]["Baz"] == baz
 
-    params = {"foo": "12", "bar": ("spam", 42, 1.414), "baz": json.dumps({"foo": "eggs"}), "spam": "eggz"}
+    params = {"foo": "12", "bar": json.dumps(("spam", 42, 1.414)),
+              "baz": json.dumps({"foo": "eggs"}), "spam": "eggz"}
     async with client.get("/foo", params=params) as resp:
         print(await resp.read())
         assert resp.status == 200
