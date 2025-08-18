@@ -259,7 +259,7 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            if {"body", "query"} & ep_data.keys():  # We need to mutate function signature.
+            if {"body", "query_raw"} & ep_data.keys():  # We need to mutate function signature.
                 @functools.wraps(handler)
                 async def wrapper(request: web.Request) -> _Resp:  # type: ignore[misc]
                     inner_handler: Callable[..., Awaitable[_Resp]] = partial(handler, request)
