@@ -124,51 +124,51 @@ async def test_body(aiohttp_client: AiohttpClient) -> None:
     schema_gen.setup(app)
     app.router.add_put("/poll/{id:\\d+}/choice", add_choices)
 
-    async with await aiohttp_client(app) as client:
-        async with client.get("/schema") as resp:
-            assert resp.ok
-            schema = await resp.json()
+    client = await aiohttp_client(app)
+    async with client.get("/schema") as resp:
+        assert resp.ok
+        schema = await resp.json()
 
-        paths = {"/poll/{id}/choice": {"put": {
-            "operationId": "add_choices",
-            "requestBody": {"content": {"application/json": {"schema": {
-                "contentMediaType": "application/json", "contentSchema": {
-                    "items": {"type": "string"}, "type": "array"},
-                "type": "string"}}}},
-            "responses": {
-                "201": {
-                    "content": {"application/json": {"schema": {
-                        "items": {"type": "string"},
-                        "type": "array"}}},
-                    "description": "Created"},
-                "404": {
-                    "content": {"application/json": {"schema": {"type": "null"}}},
-                    "description": "Not Found"}}}}}
-        assert schema["paths"] == paths
+    paths = {"/poll/{id}/choice": {"put": {
+        "operationId": "add_choices",
+        "requestBody": {"content": {"application/json": {"schema": {
+            "contentMediaType": "application/json", "contentSchema": {
+                "items": {"type": "string"}, "type": "array"},
+            "type": "string"}}}},
+        "responses": {
+            "201": {
+                "content": {"application/json": {"schema": {
+                    "items": {"type": "string"},
+                    "type": "array"}}},
+                "description": "Created"},
+            "404": {
+                "content": {"application/json": {"schema": {"type": "null"}}},
+                "description": "Not Found"}}}}}
+    assert schema["paths"] == paths
 
-        async with client.put("/poll/1/choice", json=("foo", "bar")) as resp:
-            assert resp.status == 404
-            result = await resp.json()
-            assert result is None
+    async with client.put("/poll/1/choice", json=("foo", "bar")) as resp:
+        assert resp.status == 404
+        result = await resp.json()
+        assert result is None
 
-        async with client.put("/poll/2/choice", json=("foo", "bar")) as resp:
-            assert resp.status == 201
-            result = await resp.json()
-            assert result == ["foo", "bar"]
+    async with client.put("/poll/2/choice", json=("foo", "bar")) as resp:
+        assert resp.status == 201
+        result = await resp.json()
+        assert result == ["foo", "bar"]
 
-        async with client.put("/poll/2/choice", json=(42,)) as resp:
-            assert resp.status == 400
-            result = await resp.json()
-            assert len(result) == 1
-            assert result[0]["loc"] == [0]
-            assert result[0]["type"] == "string_type"
+    async with client.put("/poll/2/choice", json=(42,)) as resp:
+        assert resp.status == 400
+        result = await resp.json()
+        assert len(result) == 1
+        assert result[0]["loc"] == [0]
+        assert result[0]["type"] == "string_type"
 
-        async with client.put("/poll/2/choice", json=42) as resp:
-            assert resp.status == 400
-            result = await resp.json()
-            assert len(result) == 1
-            assert result[0]["loc"] == []
-            assert result[0]["type"] == "tuple_type"
+    async with client.put("/poll/2/choice", json=42) as resp:
+        assert resp.status == 400
+        result = await resp.json()
+        assert len(result) == 1
+        assert result[0]["loc"] == []
+        assert result[0]["type"] == "tuple_type"
 
 async def test_view(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()

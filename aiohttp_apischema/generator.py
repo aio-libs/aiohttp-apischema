@@ -7,7 +7,7 @@ from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import (Any, Generic, Iterable, Literal, Protocol, TypedDict, TypeGuard, TypeVar,
+from typing import (Any, Generic, Iterable, Literal, Protocol, TypeGuard, TypeVar,
                     cast, get_args, get_origin, get_type_hints)
 
 from aiohttp import web
@@ -16,6 +16,11 @@ from aiohttp.typedefs import Handler
 from pydantic import Json, TypeAdapter, ValidationError
 
 from aiohttp_apischema.response import APIResponse
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired, Required
