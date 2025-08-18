@@ -81,9 +81,9 @@ class Info(TypedDict, total=False):
 class _EndpointData(TypedDict, total=False):
     body: TypeAdapter[object]
     desc: str
-    query: dict[str, object]
-    query_ta: TypeAdapter[dict[str, object]]
-    resps: dict[int, TypeAdapter[Any]]
+    query: TypeAdapter[dict[str, object]]
+    query_raw: dict[str, object]
+    resps: dict[int, TypeAdapter[object]]
     summary: str
     tags: list[str]
 
@@ -212,7 +212,7 @@ class SchemaGenerator:
 
         query_param = sig.parameters.get("query")
         if query_param and query_param.kind is query_param.KEYWORD_ONLY:
-            ep_data["query"] = query_param.annotation
+            ep_data["query_raw"] = query_param.annotation
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
@@ -336,7 +336,7 @@ class SchemaGenerator:
                 if body:
                     key = (path, method, "requestBody", None)
                     models.append((key, "validation", body))
-                if query := endpoints.get("query"):
+                if query := endpoints.get("query_raw"):
                     # We need separate schemas for each key of the TypedDict.
                     td = {}
                     for param_name, param_type in get_type_hints(query).items():
@@ -348,11 +348,11 @@ class SchemaGenerator:
                         except TypeError:
                             is_str = False
 
-                        ann_type = param_type if is_str else Json[param_type]
-                        models.append((key, "validation", TypeAdapter(ann_type)))  # type: ignore[misc,valid-type]
+                        ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
+                        models.append((key, "validation", TypeAdapter(ann_type)))
                         # We also need to convert values to Json for runtime checking.
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
-                    endpoints["query"] = TypeAdapter(TypedDict("td", td))
+                    endpoints["query"] = TypeAdapter(TypedDict("td", td))  # type: ignore[operator]
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
