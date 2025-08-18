@@ -337,7 +337,13 @@ class SchemaGenerator:
                     for param_name, param_type in get_type_hints(query).items():
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
-                        ann_type = Json[param_type]
+
+                        try:
+                            is_str = issubclass(getattr(param_type, "__origin__", param_type), str)
+                        except TypeError:
+                            is_str = False
+
+                        ann_type = param_type if is_str else Json[param_type]
                         models.append((key, "validation", TypeAdapter(ann_type)))  # type: ignore[misc,valid-type]
                         # We also need to convert values to Json for runtime checking.
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
