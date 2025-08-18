@@ -3,6 +3,7 @@ import sys
 from datetime import datetime
 from typing import Annotated, Literal
 
+import pytest
 from aiohttp import web
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp_apischema import APIResponse, SchemaGenerator
