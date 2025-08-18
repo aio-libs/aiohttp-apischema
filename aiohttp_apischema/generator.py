@@ -7,7 +7,7 @@ from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import (Any, Generic, Iterable, Literal, Protocol, TypeGuard, TypeVar,
+from typing import (Any, Concatenate, Generic, Iterable, Literal, ParamSpec, Protocol, TypeGuard, TypeVar,
                     cast, get_args, get_origin, get_type_hints)
 
 from aiohttp import web
@@ -31,6 +31,7 @@ OPENAPI_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", 
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
+_P = ParamSpec("_P")
 _Query = TypeVar("_Query", bound=dict[str, object] | None, contravariant=True)
 _Resp = TypeVar("_Resp", bound=APIResponse[Any, Any], covariant=True)
 _View = TypeVar("_View", bound=web.View)
@@ -162,18 +163,36 @@ INDEX_HTML = """<!DOCTYPE html>
 </html>"""
 SWAGGER_PATH = Path(__file__).parent / "swagger-ui"
 
+_Wrapper = Callable[[APIHandler[_Resp], web.Request], Awaitable[_Resp]]
+
 def is_openapi_method(method: str) -> TypeGuard[OpenAPIMethod]:
     return method in OPENAPI_METHODS
 
-def create_view_wrapper(handler: Callable[[_View, _T], Awaitable[_Resp]], ta: TypeAdapter[_T]) -> Callable[[_View], Awaitable[_Resp]]:
-    @functools.wraps(handler)
-    async def wrapper(self: _View) -> _Resp:  # type: ignore[misc]
-        try:
-            request_body = ta.validate_python(await self.request.read())
-        except ValidationError as e:
-            raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
-        return await handler(self, request_body)
-    return wrapper
+def make_wrapper(ep_data: _EndpointData, handler: Callable[Concatenate[_Wrapper[_Resp], _P], Awaitable[_Resp]]) -> Callable[_P, Awaitable[_Resp]] | None:
+    # Only these keys need a wrapper created.
+    if not {"body", "query_raw"} & ep_data.keys():
+        return None
+
+    async def _wrapper(handler: APIHandler[_Resp], request: web.Request) -> _Resp:
+        inner_handler: Callable[..., Awaitable[_Resp]] = handler
+
+        if body_ta := ep_data.get("body"):
+            try:
+                request_body = body_ta.validate_python(await request.read())
+            except ValidationError as e:
+                raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
+            inner_handler = partial(inner_handler, request_body)
+
+        if query_ta := ep_data.get("query"):
+            try:
+                query = query_ta.validate_python(request.query)
+            except ValidationError as e:
+                raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
+            inner_handler = partial(inner_handler, query=query)
+
+        return await inner_handler()
+
+    return functools.wraps(handler)(partial(handler, _wrapper))
 
 class SchemaGenerator:
     def __init__(self, info: Info | None = None):
@@ -247,10 +266,9 @@ class SchemaGenerator:
             for func, method in methods:
                 ep_data = self._save_handler(func, tags=list(tags))
                 self._endpoints[view]["meths"][method] = ep_data
-                ta = ep_data.get("body")
-                if ta:
-                    # TODO
-                    setattr(view, method, create_view_wrapper(func, ta))
+                wrapper = make_wrapper(ep_data, lambda w, self: w(partial(func, self), self.request))
+                if wrapper is not None:
+                    setattr(view, method, wrapper)
 
             return view
 
@@ -259,27 +277,8 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            if {"body", "query_raw"} & ep_data.keys():  # We need to mutate function signature.
-                @functools.wraps(handler)
-                async def wrapper(request: web.Request) -> _Resp:  # type: ignore[misc]
-                    inner_handler: Callable[..., Awaitable[_Resp]] = partial(handler, request)
-
-                    if body_ta := ep_data.get("body"):
-                        try:
-                            request_body = body_ta.validate_python(await request.read())
-                        except ValidationError as e:
-                            raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
-                        inner_handler = partial(inner_handler, request_body)
-
-                    if query_ta := ep_data.get("query"):
-                        try:
-                            query = query_ta.validate_python(request.query)
-                        except ValidationError as e:
-                            raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
-                        inner_handler = partial(inner_handler, query=query)
-
-                    return await inner_handler()
-
+            wrapper = make_wrapper(ep_data, lambda w, r: w(handler, r))
+            if wrapper is not None:
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
 
