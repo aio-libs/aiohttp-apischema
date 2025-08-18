@@ -168,7 +168,7 @@ _Wrapper = Callable[[APIHandler[_Resp], web.Request], Awaitable[_Resp]]
 def is_openapi_method(method: str) -> TypeGuard[OpenAPIMethod]:
     return method in OPENAPI_METHODS
 
-def make_wrapper(ep_data: _EndpointData, handler: Callable[Concatenate[_Wrapper[_Resp], _P], Awaitable[_Resp]]) -> Callable[_P, Awaitable[_Resp]] | None:
+def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Callable[Concatenate[_Wrapper[_Resp], _P], Awaitable[_Resp]]) -> Callable[_P, Awaitable[_Resp]] | None:
     # Only these keys need a wrapper created.
     if not {"body", "query_raw"} & ep_data.keys():
         return None
@@ -192,7 +192,7 @@ def make_wrapper(ep_data: _EndpointData, handler: Callable[Concatenate[_Wrapper[
 
         return await inner_handler()
 
-    return functools.wraps(handler)(partial(handler, _wrapper))
+    return functools.wraps(wrapped)(partial(handler, _wrapper))
 
 class SchemaGenerator:
     def __init__(self, info: Info | None = None):
@@ -266,7 +266,7 @@ class SchemaGenerator:
             for func, method in methods:
                 ep_data = self._save_handler(func, tags=list(tags))
                 self._endpoints[view]["meths"][method] = ep_data
-                wrapper = make_wrapper(ep_data, lambda w, self: w(partial(func, self), self.request))
+                wrapper = make_wrapper(ep_data, func, lambda w, self: w(partial(func, self), self.request))
                 if wrapper is not None:
                     setattr(view, method, wrapper)
 
@@ -277,7 +277,7 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            wrapper = make_wrapper(ep_data, lambda w, r: w(handler, r))
+            wrapper = make_wrapper(ep_data, handler, lambda w, r: w(handler, r))
             if wrapper is not None:
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
