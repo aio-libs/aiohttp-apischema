@@ -209,9 +209,6 @@ class SchemaGenerator:
         query_param = sig.parameters.get("query")
         if query_param and query_param.kind is query_param.KEYWORD_ONLY:
             ep_data["query"] = query_param.annotation
-            # We need to interpret dict values as JSON.
-            tr = validate_as(dict[str, str]).transform(lambda d: {k: json.loads(v) for k,v in d.items()})
-            ep_data["query_ta"] = TypeAdapter(tr.validate_as(query_param.annotation))
 
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
@@ -336,11 +333,16 @@ class SchemaGenerator:
                     key = (path, method, "requestBody", None)
                     models.append((key, "validation", body))
                 if query := endpoints.get("query"):
-                    # We need separate schemas for each key of the TypedDict
+                    # We need separate schemas for each key of the TypedDict.
+                    td = {}
                     for param_name, param_type in get_type_hints(query).items():
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
-                        models.append((key, "validation", TypeAdapter(Json[param_type])))  # type: ignore[misc,valid-type]
+                        ann_type = Json[param_type]
+                        models.append((key, "validation", TypeAdapter(ann_type)))  # type: ignore[misc,valid-type]
+                        # We also need to convert values to Json for runtime checking.
+                        td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
+                    endpoints["query"] = TypeAdapter(TypedDict("td", td))
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
