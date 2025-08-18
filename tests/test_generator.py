@@ -280,7 +280,7 @@ async def test_tags(aiohttp_client: AiohttpClient) -> None:
 
     assert schema["paths"]["/number"]["get"]["tags"] == ["a_tag", "b_tag"]
 
-@pytest.mark.skipif(sys.version_info <= (3, 10), reason="Pydantic fails with typing_extensions")
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="Pydantic fails with typing_extensions")
 async def test_query(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
