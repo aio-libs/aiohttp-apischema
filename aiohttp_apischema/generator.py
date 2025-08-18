@@ -266,7 +266,7 @@ class SchemaGenerator:
                             raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
                         inner_handler = partial(inner_handler, request_body)
 
-                    if query_ta := ep_data.get("query_ta"):
+                    if query_ta := ep_data.get("query"):
                         try:
                             query = query_ta.validate_python(request.query)
                         except ValidationError as e:
