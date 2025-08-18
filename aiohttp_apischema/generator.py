@@ -14,14 +14,13 @@ from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
 from pydantic import Json, TypeAdapter, ValidationError
-from pydantic.experimental.pipeline import validate_as
 
 from aiohttp_apischema.response import APIResponse
 
 if sys.version_info >= (3, 11):
-    from typing import Required
+    from typing import NotRequired, Required
 else:
-    from typing_extensions import Required
+    from typing_extensions import NotRequired, Required
 
 OPENAPI_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
 
