@@ -281,7 +281,7 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            wrapper = make_wrapper(ep_data, handler, lambda w, f, r: w(f, r))
+            wrapper = make_wrapper(ep_data, handler, lambda w, f, r: w(partial(f, r), r))
             if wrapper is not None:
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
