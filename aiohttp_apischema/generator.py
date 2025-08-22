@@ -192,7 +192,7 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
         return await inner_handler()
 
-    return functools.wraps(wrapped)(lamda *a, **kw: handler(_wrapper, *a, **kw))
+    return functools.wraps(wrapped)(lambda *a, **kw: handler(_wrapper, *a, **kw))
 
 class SchemaGenerator:
     def __init__(self, info: Info | None = None):
