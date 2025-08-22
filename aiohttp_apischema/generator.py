@@ -194,7 +194,7 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
     @functools.wraps(wrapped)
     async def outer_wrapper(*args, **kwargs):
-        return await handler(_wrapper, wrapped, *args, **kwargs))
+        return await handler(_wrapper, wrapped, *args, **kwargs)
 
     return outer_wrapper
 
