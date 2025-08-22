@@ -266,7 +266,7 @@ class SchemaGenerator:
             for func, method in methods:
                 ep_data = self._save_handler(func, tags=list(tags))
                 self._endpoints[view]["meths"][method] = ep_data
-                wrapper = make_wrapper(ep_data, func, lambda w, self, f: w(partial(f, self), self.request))
+                wrapper = make_wrapper(ep_data, func, lambda w, f, self: w(partial(f, self), self.request))
                 if wrapper is not None:
                     setattr(view, method, wrapper)
 
@@ -277,7 +277,7 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            wrapper = make_wrapper(ep_data, handler, lambda w, r, f: w(f, r))
+            wrapper = make_wrapper(ep_data, handler, lambda w, f, r: w(f, r))
             if wrapper is not None:
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
