@@ -175,7 +175,6 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
     async def _wrapper(handler: APIHandler[_Resp], request: web.Request) -> _Resp:
         inner_handler: Callable[..., Awaitable[_Resp]] = handler
-        print(handler, ep_data)
 
         if body_ta := ep_data.get("body"):
             try:
@@ -193,7 +192,7 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
         return await inner_handler()
 
-    return functools.wraps(wrapped)(lambda *a, **kw: handler(_wrapper, *a, **kw))
+    return functools.wraps(wrapped)(lambda *a, **kw: handler(_wrapper, wrapped, *a, **kw))
 
 class SchemaGenerator:
     def __init__(self, info: Info | None = None):
@@ -267,7 +266,7 @@ class SchemaGenerator:
             for func, method in methods:
                 ep_data = self._save_handler(func, tags=list(tags))
                 self._endpoints[view]["meths"][method] = ep_data
-                wrapper = make_wrapper(ep_data, func, lambda w, self: w(partial(func, self), self.request))
+                wrapper = make_wrapper(ep_data, func, lambda w, self, f: w(partial(f, self), self.request))
                 if wrapper is not None:
                     setattr(view, method, wrapper)
 
@@ -278,7 +277,7 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            wrapper = make_wrapper(ep_data, handler, lambda w, r: w(handler, r))
+            wrapper = make_wrapper(ep_data, handler, lambda w, r, f: w(f, r))
             if wrapper is not None:
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
