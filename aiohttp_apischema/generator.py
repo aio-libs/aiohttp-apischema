@@ -175,6 +175,7 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
     async def _wrapper(handler: APIHandler[_Resp], request: web.Request) -> _Resp:
         inner_handler: Callable[..., Awaitable[_Resp]] = handler
+        print(handler, ep_data)
 
         if body_ta := ep_data.get("body"):
             try:
