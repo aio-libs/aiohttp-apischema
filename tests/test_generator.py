@@ -325,7 +325,7 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
                             "contentSchema": {"$ref": "#/components/schemas/Baz"},
                             "type": "string"}},
                        {"name": "spam", "in": "query", "required": False, "schema": {
-                            "type": "string", "enum": ["eggz"]}}],
+                            "type": "string", "const": "eggz"}}],
         "responses": {
             "200": {
                 "content": {"application/json": {"schema": {"type": "integer"}}},
