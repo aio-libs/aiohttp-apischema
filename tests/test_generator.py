@@ -331,8 +331,8 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
                 "content": {"application/json": {"schema": {"type": "integer"}}},
                 "description": "OK"}}}}}
     assert schema["paths"] == paths
-    baz = {"properties": {"foo": {"title": "Foo", "type": "string"}}, "required": ["foo"],
-           "title": "Baz", "type": "object"}
+    baz = {"properties": {"foo": {"title": "Foo", "type": "string", "enum": ["spam", "eggs"]}},
+           "required": ["foo"], "title": "Baz", "type": "object"}
     assert schema["components"]["schemas"]["Baz"] == baz
 
     params = {"foo": "12", "bar": json.dumps(("spam", 42, 1.414)),
