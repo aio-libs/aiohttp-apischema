@@ -291,7 +291,7 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         foo: int
         bar: NotRequired[tuple[str, int, float]]
         baz: Baz
-        spam: str
+        spam: NotRequired[str]
 
     @schema_gen.api()
     async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
@@ -343,7 +343,7 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result == 12
 
     params = {"foo": "abc", "bar": json.dumps((42, 42, 1.414)),
-              "baz": json.dumps({"foo": "eggs"}), "spam": "eggz"}
+              "baz": json.dumps({"foo": "eggs"})}
     async with client.get("/foo", params=params) as resp:
         assert resp.status == 400
         result = await resp.json()
