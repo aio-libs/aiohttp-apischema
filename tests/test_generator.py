@@ -342,6 +342,16 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         result = await resp.json()
         assert result == 12
 
+    params = {"foo": "abc", "bar": json.dumps((42, 42, 1.414)),
+              "baz": json.dumps({"foo": "eggs"}), "spam": "eggz"}
+    async with client.get("/foo", params=params) as resp:
+        assert resp.status == 400
+        result = await resp.json()
+        assert len(result) == 2
+        assert result == ()
+        assert result[0]["loc"] == []
+        assert result[0]["type"] == "tuple_type"
+
 async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
