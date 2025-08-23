@@ -1,11 +1,19 @@
+import json
+import sys
 from datetime import datetime
 from typing import Annotated, Literal
 
+import pytest
 from aiohttp import web
 from aiohttp.pytest_plugin import AiohttpClient
 from aiohttp_apischema import APIResponse, SchemaGenerator
 from aiohttp_apischema.generator import Contact, Info, License
 from pydantic import Field
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
 
 
 from typing_extensions import TypedDict
@@ -271,3 +279,84 @@ async def test_tags(aiohttp_client: AiohttpClient) -> None:
         schema = await resp.json()
 
     assert schema["paths"]["/number"]["get"]["tags"] == ["a_tag", "b_tag"]
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="Pydantic fails with typing_extensions")
+async def test_query(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    class Baz(TypedDict):
+        foo: Literal["spam", "eggs"]
+
+    class QueryArgs(TypedDict):
+        foo: int
+        bar: NotRequired[tuple[str, int, float]]
+        baz: Baz
+        spam: NotRequired[Literal["eggz"]]
+
+    @schema_gen.api()
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        assert isinstance(query["foo"], int)
+        assert query["bar"] == ("spam", 42, 1.414)
+        assert query["baz"]["foo"] == "eggs"
+        assert query["spam"] == "eggz"
+        return APIResponse(query["foo"])
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/foo", handler)
+
+    client = await aiohttp_client(app)
+    async with client.get("/schema") as resp:
+        assert resp.ok
+        schema = await resp.json()
+
+    bar = {"maxItems": 3, "minItems": 3, "type": "array",
+           "prefixItems": [{"type": "string"}, {"type": "integer"}, {"type": "number"}]}
+    paths = {"/foo": {"get": {
+        "operationId": "handler",
+        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"type": "integer"}, "type": "string"}},
+                       {"name": "bar", "in": "query", "required": False, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": bar, "type": "string"}},
+                       {"name": "baz", "in": "query", "required": True, "schema": {
+                            "contentMediaType": "application/json",
+                            "contentSchema": {"$ref": "#/components/schemas/Baz"},
+                            "type": "string"}},
+                       {"name": "spam", "in": "query", "required": False, "schema": {
+                            "type": "string", "const": "eggz"}}],
+        "responses": {
+            "200": {
+                "content": {"application/json": {"schema": {"type": "integer"}}},
+                "description": "OK"}}}}}
+    assert schema["paths"] == paths
+    baz = {"properties": {"foo": {"title": "Foo", "type": "string", "enum": ["spam", "eggs"]}},
+           "required": ["foo"], "title": "Baz", "type": "object"}
+    assert schema["components"]["schemas"]["Baz"] == baz
+
+    params = {"foo": "12", "bar": json.dumps(("spam", 42, 1.414)),
+              "baz": json.dumps({"foo": "eggs"}), "spam": "eggz"}
+    async with client.get("/foo", params=params) as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == 12
+
+    params = {"foo": "abc", "bar": json.dumps((42, 42, 1.414)),
+              "baz": json.dumps({"foo": "eggs"})}
+    async with client.get("/foo", params=params) as resp:
+        assert resp.status == 400
+        result = await resp.json()
+        assert len(result) == 2
+        assert result[0]["loc"] == ["foo"]
+        assert result[0]["type"] == "json_invalid"
+        assert result[1]["loc"] == ["bar", 0]
+        assert result[1]["type"] == "string_type"
+
+async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    @schema_gen.api()  # type: ignore[arg-type]  # <- Do not remove ignore
+    async def foo(request: web.Request, *, foo: int) -> APIResponse[int]:
+        """Test static typing error occurs in mypy."""
+        assert False

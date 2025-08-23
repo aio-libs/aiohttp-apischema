@@ -2,10 +2,12 @@ import functools
 import inspect
 import sys
 from collections.abc import Awaitable, Callable, Mapping
+from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import Any, Iterable, Literal, TypedDict, TypeGuard, TypeVar, cast, get_args, get_origin
+from typing import (Any, Annotated, Concatenate, Generic, Iterable, Literal, ParamSpec,
+                    Protocol, TypeGuard, TypeVar, cast, get_args, get_origin, get_type_hints)
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
@@ -14,21 +16,42 @@ from pydantic import Json, TypeAdapter, ValidationError
 
 from aiohttp_apischema.response import APIResponse
 
-if sys.version_info >= (3, 11):
-    from typing import Required
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
 else:
-    from typing_extensions import Required
+    from typing_extensions import TypedDict
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired, Required
+else:
+    from typing_extensions import NotRequired, Required
 
 OPENAPI_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", "patch", "trace"})
 
 _T = TypeVar("_T")
-_Resp = TypeVar("_Resp", bound=APIResponse[Any, Any])
+_U = TypeVar("_U")
+_P = ParamSpec("_P")
+_Resp = TypeVar("_Resp", bound=APIResponse[Any, Any], covariant=True)
 _View = TypeVar("_View", bound=web.View)
+OpenAPIMethod = Literal["get", "put", "post", "delete", "options", "head", "patch", "trace"]
+__ModelKey = tuple[str, OpenAPIMethod, _T, _U]
+_ModelKey = (
+    __ModelKey[Literal["requestBody"], None]
+    | __ModelKey[Literal["parameter"], tuple[str, bool]]
+    | __ModelKey[Literal["response"], int]
+)
+
+class _APIHandler(Protocol, Generic[_Resp]):
+    def __call__(self, request: web.Request, *, query: Any) -> Awaitable[_Resp]:
+        ...
+
+
 APIHandler = (
     Callable[[web.Request], Awaitable[_Resp]]
     | Callable[[web.Request, Any], Awaitable[_Resp]]
+    | _APIHandler[_Resp]
 )
-OpenAPIMethod = Literal["get", "put", "post", "delete", "options", "head", "patch", "trace"]
+
 
 class Contact(TypedDict, total=False):
     name: str
@@ -57,7 +80,9 @@ class Info(TypedDict, total=False):
 class _EndpointData(TypedDict, total=False):
     body: TypeAdapter[object]
     desc: str
-    resps: dict[int, TypeAdapter[Any]]
+    query: TypeAdapter[dict[str, object]]
+    query_raw: dict[str, object]
+    resps: dict[int, TypeAdapter[object]]
     summary: str
     tags: list[str]
 
@@ -72,6 +97,16 @@ class _Components(TypedDict, total=False):
 class _MediaTypeObject(TypedDict, total=False):
     schema: object
 
+# in is a reserved keyword.
+_ParameterObject = TypedDict("_ParameterObject", {
+    "deprecated": bool,
+    "description": str,
+    "name": Required[str],
+    "in": Required[Literal["query", "header", "path", "cookie"]],
+    "required": bool,
+    "schema": object
+}, total=False)
+
 class _RequestBodyObject(TypedDict, total=False):
     content: Required[dict[str, _MediaTypeObject]]
 
@@ -82,6 +117,7 @@ class _ResponseObject(TypedDict, total=False):
 class _OperationObject(TypedDict, total=False):
     description: str
     operationId: str
+    parameters: list[_ParameterObject]
     requestBody: _RequestBodyObject
     responses: dict[str, _ResponseObject]
     summary: str
@@ -125,18 +161,43 @@ INDEX_HTML = """<!DOCTYPE html>
 </html>"""
 SWAGGER_PATH = Path(__file__).parent / "swagger-ui"
 
+_Wrapper = Callable[[APIHandler[_Resp], web.Request], Awaitable[_Resp]]
+
 def is_openapi_method(method: str) -> TypeGuard[OpenAPIMethod]:
     return method in OPENAPI_METHODS
 
-def create_view_wrapper(handler: Callable[[_View, _T], Awaitable[_Resp]], ta: TypeAdapter[_T]) -> Callable[[_View], Awaitable[_Resp]]:
-    @functools.wraps(handler)
-    async def wrapper(self: _View) -> _Resp:  # type: ignore[misc]
-        try:
-            request_body = ta.validate_python(await self.request.read())
-        except ValidationError as e:
-            raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
-        return await handler(self, request_body)
-    return wrapper
+def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Callable[Concatenate[_Wrapper[_Resp], APIHandler[_Resp], _P], Awaitable[_Resp]]) -> Callable[_P, Awaitable[_Resp]] | None:
+    # Only these keys need a wrapper created.
+    if not {"body", "query_raw"} & ep_data.keys():
+        return None
+
+    async def _wrapper(handler: APIHandler[_Resp], request: web.Request) -> _Resp:
+        inner_handler: Callable[..., Awaitable[_Resp]] = handler
+
+        if body_ta := ep_data.get("body"):
+            try:
+                request_body = body_ta.validate_python(await request.read())
+            except ValidationError as e:
+                raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
+            inner_handler = partial(inner_handler, request_body)
+
+        if query_ta := ep_data.get("query"):
+            try:
+                query = query_ta.validate_python(request.query)
+            except ValidationError as e:
+                raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
+            inner_handler = partial(inner_handler, query=query)
+
+        return await inner_handler()
+
+    # To handle both web.View methods and regular handlers (with different ways to get the
+    # request object), this outer_wrapper() is needed with a custom handler lambda.
+
+    @functools.wraps(wrapped)
+    async def outer_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _Resp:  # type: ignore[misc]
+        return await handler(_wrapper, wrapped, *args, **kwargs)
+
+    return outer_wrapper
 
 class SchemaGenerator:
     def __init__(self, info: Info | None = None):
@@ -173,6 +234,10 @@ class SchemaGenerator:
             if body.kind in {body.POSITIONAL_ONLY, body.POSITIONAL_OR_KEYWORD}:
                 ep_data["body"] = TypeAdapter(Json[body.annotation])  # type: ignore[misc,name-defined]
 
+        query_param = sig.parameters.get("query")
+        if query_param and query_param.kind is query_param.KEYWORD_ONLY:
+            ep_data["query_raw"] = query_param.annotation
+
         ep_data["resps"] = {}
         if get_origin(sig.return_annotation) is UnionType:
             resps = get_args(sig.return_annotation)
@@ -206,9 +271,9 @@ class SchemaGenerator:
             for func, method in methods:
                 ep_data = self._save_handler(func, tags=list(tags))
                 self._endpoints[view]["meths"][method] = ep_data
-                ta = ep_data.get("body")
-                if ta:
-                    setattr(view, method, create_view_wrapper(func, ta))
+                wrapper = make_wrapper(ep_data, func, lambda w, f, self: w(partial(f, self), self.request))
+                if wrapper is not None:
+                    setattr(view, method, wrapper)
 
             return view
 
@@ -217,18 +282,8 @@ class SchemaGenerator:
     def api(self, tags: Iterable[str] = ()) -> Callable[[APIHandler[_Resp]], Callable[[web.Request], Awaitable[_Resp]]]:
         def decorator(handler: APIHandler[_Resp]) -> Callable[[web.Request], Awaitable[_Resp]]:
             ep_data = self._save_handler(handler, tags=list(tags))
-            ta = ep_data.get("body")
-            if ta:
-                @functools.wraps(handler)
-                async def wrapper(request: web.Request) -> _Resp:  # type: ignore[misc]
-                    nonlocal handler
-                    try:
-                        request_body = ta.validate_python(await request.read())
-                    except ValidationError as e:
-                        raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
-                    handler = cast(Callable[[web.Request, Any], Awaitable[_Resp]], handler)
-                    return await handler(request, request_body)
-
+            wrapper = make_wrapper(ep_data, handler, lambda w, f, r: w(partial(f, r), r))
+            if wrapper is not None:
                 self._endpoints[wrapper] = {"meths": {None: ep_data}}
                 return wrapper
 
@@ -240,7 +295,7 @@ class SchemaGenerator:
 
     async def _on_startup(self, app: web.Application) -> None:
         #assert app.router.frozen
-        models: list[tuple[tuple[str, OpenAPIMethod, int | Literal["requestBody"]], Literal["serialization", "validation"], TypeAdapter[object]]] = []
+        models: list[tuple[_ModelKey, Literal["serialization", "validation"], TypeAdapter[object]]] = []
         paths: dict[str, _PathObject] = {}
         for route in app.router.routes():
             ep_data = self._endpoints.get(route.handler)
@@ -281,12 +336,32 @@ class SchemaGenerator:
                 path_data[method] = operation
 
                 body = endpoints.get("body")
-                key: tuple[str, OpenAPIMethod, int | Literal["requestBody"]]
+                key: _ModelKey
                 if body:
-                    key = (path, method, "requestBody")
+                    key = (path, method, "requestBody", None)
                     models.append((key, "validation", body))
+                if query := endpoints.get("query_raw"):
+                    # We need separate schemas for each key of the TypedDict.
+                    td = {}
+                    for param_name, param_type in get_type_hints(query).items():
+                        required = param_name in query.__required_keys__  # type: ignore[attr-defined]
+                        key = (path, method, "parameter", (param_name, required))
+
+                        extracted_type = param_type
+                        while get_origin(extracted_type) in {Annotated, Literal, Required, NotRequired}:
+                            extracted_type = get_args(param_type)[0]
+                        try:
+                            is_str = issubclass(extracted_type, str)
+                        except TypeError:
+                            is_str = isinstance(extracted_type, str)  # Literal
+
+                        # We also need to convert values to Json for runtime checking.
+                        ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
+                        models.append((key, "validation", TypeAdapter(ann_type)))
+                        td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
+                    endpoints["query"] = TypeAdapter(TypedDict(query.__name__, td))  # type: ignore[attr-defined,operator]
                 for code, model in endpoints["resps"].items():
-                    key = (path, method, code)
+                    key = (path, method, "response", code)
                     models.append((key, "serialization", model))
 
         elems, defs = TypeAdapter.json_schemas(models, ref_template="#/components/schemas/{model}")
@@ -294,17 +369,26 @@ class SchemaGenerator:
             self._openapi["components"] = {"schemas": defs["$defs"]}
 
         # TODO: default response
-        for ((path, method, code_or_key), mode), schema in elems.items():
-            if code_or_key == "requestBody":
+        key_type: str
+        for (key, mode), schema in elems.items():
+            if key[2] == "requestBody":
+                path, method, key_type, _ = key
                 assert mode == "validation"
-                paths[path][method][code_or_key] = {"content": {"application/json": {"schema": schema}}}
+                paths[path][method]["requestBody"] = {"content": {"application/json": {"schema": schema}}}
+            elif key[2] == "parameter":
+                path, method, key_type, (param_name, required) = key
+                assert mode == "validation"
+                parameter: _ParameterObject = {
+                    "name": param_name, "in": "query", "required": required, "schema": schema}
+                paths[path][method].setdefault("parameters", []).append(parameter)
             else:
-                assert isinstance(code_or_key, int)
+                path, method, key_type, code = key
+                assert key_type == "response"
                 assert mode == "serialization"
                 responses = paths[path][method].setdefault("responses", {})
                 content: dict[str, _MediaTypeObject] = {"application/json": {"schema": schema}}
-                reason = HTTPStatus(code_or_key).phrase
-                responses[str(code_or_key)] = {"description": reason, "content": content}
+                reason = HTTPStatus(code).phrase
+                responses[str(code)] = {"description": reason, "content": content}
         if paths:
             self._openapi["paths"] = paths
 

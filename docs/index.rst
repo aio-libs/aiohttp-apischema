@@ -62,13 +62,36 @@ Validation of the request body is achieved by adding a positional parameter:
 
 .. code-block:: python
 
-    async def handler(request: web.Request, body: dict[int, str]) -> APIResponse[int, Literal[200]]:
+    async def handler(request: web.Request, body: dict[int, str]) -> APIResponse[int]:
         # body has been validated, so we can be sure the keys are int now.
         return APIResponse(sum(body.keys()))
 
 This will include the information in the schema's requestBody, plus it will validate
 the input from the user. If validation fails it will return a 400 response with
 information about what was incorrect.
+
+Keyword-only parameters can be defined for ``query`` arguments:
+
+.. code-block:: python
+
+    class QueryArgs(TypedDict, total=False):
+        sort: Literal["asc", "desc"]
+
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        return sorted(results, reverse=query.get("sort", "asc") == "desc")
+
+Pydantic options
+----------------
+
+You can add custom Pydantic options using :class:`typing.Annotated`:
+
+.. code-block:: python
+
+    class QueryArgs(TypedDict):
+        sort: Annotated[Literal["asc", "desc"], pydantic.Field(default="asc")]
+
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        return sorted(results, reverse=query["sort"] == "desc")
 
 Customising schema generation
 -----------------------------

@@ -43,6 +43,10 @@ SchemaGenerator
       in the schema. When the handler is executed, the request body will be read and
       validated against that type.
 
+      The handler function can define a `query` keyword-only parameter whose type
+      annotation must be a form of :class:`typing.TypedDict`. When the handler is
+      executed, the query parameters will be validated against that type.
+
       :param tags: Sequence of strings used to specify tags to group endpoints.
 
    .. method:: api_view(tags=())
