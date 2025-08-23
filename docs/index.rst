@@ -88,6 +88,12 @@ You can use docstrings to customise the summary and description shown in the sch
         description.
         """
 
+Tags
+++++
+
+Tags can be added to group endpoints using the ``tags`` parameter in the decorators
+(see :meth:`aiohttp_schema.SchemaGenerator.api`).
+
 Library Installation
 --------------------
 
