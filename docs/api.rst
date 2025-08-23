@@ -31,7 +31,7 @@ SchemaGenerator
                 By default the value is ``{"title": "API", "version": "1.0"}``
 
 
-   .. method:: api()
+   .. method:: api(tags=())
 
       Use as a decorator to register a handler function to be part of the API schema.
 
@@ -47,7 +47,9 @@ SchemaGenerator
       annotation must be a form of :class:`typing.TypedDict`. When the handler is
       executed, the query parameters will be validated against that type.
 
-   .. method:: api_view()
+      :param tags: Sequence of strings used to specify tags to group endpoints.
+
+   .. method:: api_view(tags=())
 
       Use as a decorator to register a :class:`aiohttp.web.View` class to be part of
       the API schema. This will register each endpoint method defined in the class.
