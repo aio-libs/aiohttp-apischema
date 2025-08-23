@@ -348,9 +348,10 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert resp.status == 400
         result = await resp.json()
         assert len(result) == 2
-        assert result == ()
-        assert result[0]["loc"] == []
-        assert result[0]["type"] == "tuple_type"
+        assert result[0]["loc"] == ["foo"]
+        assert result[0]["type"] == "json_invalid"
+        assert result[1]["loc"] == ["bar", 0]
+        assert result[1]["type"] == "string_type"
 
 async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
