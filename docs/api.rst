@@ -45,18 +45,12 @@ SchemaGenerator
 
       :param tags: Sequence of strings used to specify tags to group endpoints.
 
-                   By default the value is ``()``.
-
    .. method:: api_view(tags=())
 
       Use as a decorator to register a :class:`aiohttp.web.View` class to be part of
       the API schema. This will register each endpoint method defined in the class.
 
       See :meth:`SchemaGenerator.api` for more information.
-
-      :param tags: Sequence of strings used to specify tags to group endpoints.
-
-                   By default the value is ``()``.
 
    .. method:: setup(app)
 
