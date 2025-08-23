@@ -347,12 +347,13 @@ class SchemaGenerator:
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
 
-                        extracted_type = (
-                            get_args(param_type)[0]
-                            if get_origin(param_type) in (Annotated, Required, NotRequired)
-                            else param_type
-                        )
-                        is_str = issubclass(extracted_type, str)
+                        extracted_type = param_type
+                        while get_origin(extracted_type) in {Annotated, Literal, Required, NotRequired}:
+                            extracted_type = get_args(param_type)[0]
+                        try:
+                            is_str = issubclass(extracted_type, str)
+                        except TypeError:
+                            is_str = isinstance(extracted_type, str)  # Literal
 
                         # We also need to convert values to Json for runtime checking.
                         ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
