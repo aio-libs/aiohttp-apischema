@@ -168,7 +168,7 @@ _Wrapper = Callable[[APIHandler[_Resp], web.Request], Awaitable[_Resp]]
 def is_openapi_method(method: str) -> TypeGuard[OpenAPIMethod]:
     return method in OPENAPI_METHODS
 
-def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Callable[Concatenate[_Wrapper[_Resp], _P], Awaitable[_Resp]]) -> Callable[_P, Awaitable[_Resp]] | None:
+def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Callable[Concatenate[_Wrapper[_Resp], APIHandler[_Resp], _P], Awaitable[_Resp]]) -> Callable[_P, Awaitable[_Resp]] | None:
     # Only these keys need a wrapper created.
     if not {"body", "query_raw"} & ep_data.keys():
         return None
@@ -192,8 +192,11 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
         return await inner_handler()
 
+    # To handle both web.View methods and regular handlers (with different ways to get the
+    # request object), this outer_wrapper() is needed with a custom handler lambda.
+
     @functools.wraps(wrapped)
-    async def outer_wrapper(*args, **kwargs):
+    async def outer_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _Resp:  # type: ignore[misc]
         return await handler(_wrapper, wrapped, *args, **kwargs)
 
     return outer_wrapper
