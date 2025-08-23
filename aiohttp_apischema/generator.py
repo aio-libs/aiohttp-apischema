@@ -1,6 +1,5 @@
 import functools
 import inspect
-import json
 import sys
 from collections.abc import Awaitable, Callable, Mapping
 from functools import partial
@@ -32,7 +31,6 @@ OPENAPI_METHODS = frozenset({"get", "put", "post", "delete", "options", "head", 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
 _P = ParamSpec("_P")
-_Query = TypeVar("_Query", bound=dict[str, object] | None, contravariant=True)
 _Resp = TypeVar("_Resp", bound=APIResponse[Any, Any], covariant=True)
 _View = TypeVar("_View", bound=web.View)
 OpenAPIMethod = Literal["get", "put", "post", "delete", "options", "head", "patch", "trace"]
@@ -354,11 +352,11 @@ class SchemaGenerator:
                         except TypeError:
                             is_str = False
 
+                        # We also need to convert values to Json for runtime checking.
                         ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
                         models.append((key, "validation", TypeAdapter(ann_type)))
-                        # We also need to convert values to Json for runtime checking.
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
-                    endpoints["query"] = TypeAdapter(TypedDict("td", td))  # type: ignore[operator]
+                    endpoints["query"] = TypeAdapter(TypedDict(query.__name__, td))  # type: ignore[operator]
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
@@ -383,7 +381,6 @@ class SchemaGenerator:
             else:
                 path, method, key_type, code = key
                 assert key_type == "response"
-                assert isinstance(code, int)
                 assert mode == "serialization"
                 responses = paths[path][method].setdefault("responses", {})
                 content: dict[str, _MediaTypeObject] = {"application/json": {"schema": schema}}
