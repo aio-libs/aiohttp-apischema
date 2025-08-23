@@ -349,7 +349,7 @@ class SchemaGenerator:
 
                         extracted_type = (
                             get_args(param_type)[0]
-                            if (get_origin(param_type) in (Annotated, Required, NotRequired)
+                            if get_origin(param_type) in (Annotated, Required, NotRequired)
                             else param_type
                         )
                         is_str = issubclass(extracted_type, str)
