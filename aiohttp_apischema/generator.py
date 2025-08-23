@@ -6,8 +6,8 @@ from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from types import UnionType
-from typing import (Any, Concatenate, Generic, Iterable, Literal, ParamSpec, Protocol, TypeGuard, TypeVar,
-                    cast, get_args, get_origin, get_type_hints)
+from typing import (Any, Annotated, Concatenate, Generic, Iterable, Literal, ParamSpec,
+                    Protocol, TypeGuard, TypeVar, cast, get_args, get_origin, get_type_hints)
 
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
