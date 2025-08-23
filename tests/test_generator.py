@@ -285,7 +285,7 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
     class Baz(TypedDict):
-        foo: str
+        foo: Literal["spam", "eggs"]
 
     class QueryArgs(TypedDict):
         foo: int

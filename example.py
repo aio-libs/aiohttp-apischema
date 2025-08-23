@@ -37,6 +37,7 @@ CHOICES1: tuple[Choice, ...] = ({"choice": "Not much", "votes": 0},
 
 
 SCHEMA = SchemaGenerator()
+NotFound = APIResponse[None, Literal[404]]
 
 POLLS = {1: POLL1}
 CHOICES = {1: list(CHOICES1)}
@@ -52,7 +53,7 @@ async def list_polls(request: web.Request) -> APIResponse[tuple[Poll, ...], Lite
 
 
 @SCHEMA.api()
-async def add_choice(request: web.Request, message: str) -> APIResponse[int, Literal[201]] | APIResponse[None, Literal[404]]:
+async def add_choice(request: web.Request, message: str) -> APIResponse[int, Literal[201]] | NotFound:
     """Edit a choice.
 
     Return the ID of the new choice.
@@ -65,16 +66,28 @@ async def add_choice(request: web.Request, message: str) -> APIResponse[int, Lit
     return APIResponse[None, Literal[404]](None, status=404)
 
 
+class GetQuery(TypedDict):
+    """Define our query arguments for the get endpoint."""
+    results: Annotated[bool, Field(default=True)]
+
+
+class GetPollResult(Poll, total=False):
+    results: list[Choice]
+
+
 @SCHEMA.api_view()
 class PollView(web.View):
     """Endpoints for individual polls."""
 
-    async def get(self) -> APIResponse[Poll, Literal[200]] | APIResponse[None, Literal[404]]:
+    async def get(self, *, query: GetQuery) -> APIResponse[GetPollResult, Literal[200]] | NotFound:
         """Fetch a poll by ID."""
         poll_id = int(self.request.match_info["id"])
         poll = POLLS.get(poll_id)
         if poll:
-            return APIResponse(poll)
+            poll_result: GetPollResult = poll.copy()  # type: ignore[assignment]
+            if query["results"]:
+                poll_result["results"] = CHOICES[poll_id]
+            return APIResponse(poll_result)
         return APIResponse[None, Literal[404]](None, status=404)
 
     async def put(self, body: NewPoll) -> APIResponse[int]:
