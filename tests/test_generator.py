@@ -291,7 +291,7 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         foo: int
         bar: NotRequired[tuple[str, int, float]]
         baz: Baz
-        spam: NotRequired[str]
+        spam: NotRequired[Literal["eggz"]]
 
     @schema_gen.api()
     async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
@@ -325,7 +325,7 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
                             "contentSchema": {"$ref": "#/components/schemas/Baz"},
                             "type": "string"}},
                        {"name": "spam", "in": "query", "required": False, "schema": {
-                            "type": "string"}}],
+                            "type": "string", "enum": ["eggz"]}}],
         "responses": {
             "200": {
                 "content": {"application/json": {"schema": {"type": "integer"}}},
