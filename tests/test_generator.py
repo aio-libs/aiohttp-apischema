@@ -348,4 +348,4 @@ async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
     @schema_gen.api()  # type: ignore[arg-type]  # <- Do not remove ignore
     async def foo(request: web.Request, *, foo: int) -> APIResponse[int]:
         """Test static typing error occurs in mypy."""
-        return APIResponse(0)
+        assert False
