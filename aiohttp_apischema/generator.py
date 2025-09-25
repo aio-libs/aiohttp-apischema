@@ -343,13 +343,13 @@ class SchemaGenerator:
                 if query := endpoints.get("query_raw"):
                     # We need separate schemas for each key of the TypedDict.
                     td = {}
-                    for param_name, param_type in get_type_hints(query).items():
+                    for param_name, param_type in get_type_hints(query, include_extras=True).items():
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
 
                         extracted_type = param_type
                         while get_origin(extracted_type) in {Annotated, Literal, Required, NotRequired}:
-                            extracted_type = get_args(param_type)[0]
+                            extracted_type = get_args(extracted_type)[0]
                         try:
                             is_str = issubclass(extracted_type, str)
                         except TypeError:
