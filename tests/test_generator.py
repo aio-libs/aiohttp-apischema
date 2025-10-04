@@ -354,6 +354,32 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result[1]["type"] == "string_type"
 
 
+async def test_query_literal(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    class QueryArgs(TypedDict):
+        foo: Literal[42, "spam"]
+
+    @schema_gen.api()
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        return APIResponse(query["foo"])
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/foo", handler)
+
+    client = await aiohttp_client(app)
+    async with client.get("/foo", params={"foo": 42}) as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == 42
+
+    async with client.get("/foo", params={"foo": "spam"}) as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == "spam"
+
+
 async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
