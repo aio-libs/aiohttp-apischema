@@ -352,10 +352,8 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result[0]["type"] == "json_invalid"
         assert result[1]["loc"] == ["bar", 0]
         assert result[1]["type"] == "string_type"
-        assert False
 
 
-@pytest.mark.skip
 async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
