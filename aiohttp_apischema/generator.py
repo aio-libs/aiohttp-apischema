@@ -351,6 +351,7 @@ class SchemaGenerator:
                         inspected_type = inspect_annotation(param_type, annotation_source=AnnotationSource.TYPED_DICT)
                         # Strip qualifiers (Required/NotRequired) from param_type.
                         param_type = Annotated[inspected_type.type, inspected_type.metadata]
+                        print(param_type)
                         extracted_type = inspected_type.type
                         while get_origin(extracted_type) is Literal:
                             extracted_type = get_args(extracted_type)[0]
