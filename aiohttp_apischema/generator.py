@@ -348,13 +348,13 @@ class SchemaGenerator:
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
 
-                        inspected_type = inspect_annotation(param_type, annotation_source=AnnotationSource.TYPED_DICT)
+                        insp = inspect_annotation(param_type, annotation_source=AnnotationSource.TYPED_DICT)
                         # Strip qualifiers (Required/NotRequired) from param_type.
                         if sys.version_info >= (3, 11):
-                            param_type = Annotated[inspected_type.type, *inspected_type.metadata]
+                            param_type = Annotated[insp.type, *insp.metadata] if insp.metadata else insp.type
                         else:
-                            param_type = Annotated[(inspected_type.type, *inspected_type.metadata)]
-                        extracted_type = inspected_type.type
+                            param_type = Annotated[(insp.type, *insp.metadata)] if insp.metadata else insp.type
+                        extracted_type = insp.type
                         while get_origin(extracted_type) is Literal:
                             extracted_type = get_args(extracted_type)[0]
                         try:
