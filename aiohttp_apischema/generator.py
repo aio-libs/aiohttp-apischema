@@ -350,10 +350,8 @@ class SchemaGenerator:
 
                         insp = inspect_annotation(param_type, annotation_source=AnnotationSource.TYPED_DICT)
                         # Strip qualifiers (Required/NotRequired) from param_type.
-                        if sys.version_info >= (3, 11):
-                            param_type = Annotated[insp.type, *insp.metadata] if insp.metadata else insp.type
-                        else:
-                            param_type = Annotated[(insp.type, *insp.metadata)] if insp.metadata else insp.type
+                        # TODO(PY311): (remove tuple) Annotated[insp.type, *insp.metadata]
+                        param_type = Annotated[(insp.type, *insp.metadata)] if insp.metadata else insp.type
                         extracted_type = insp.type
                         while get_origin(extracted_type) is Literal:
                             extracted_type = get_args(extracted_type)[0]
