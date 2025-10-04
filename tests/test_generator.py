@@ -353,6 +353,36 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result[1]["loc"] == ["bar", 0]
         assert result[1]["type"] == "string_type"
 
+
+async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    class QueryArgs(TypedDict):
+        foo: Annotated[int, Field(default=42, description="Some description")]
+
+    @schema_gen.api()
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        return APIResponse(query["foo"])
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/foo", handler)
+
+    client = await aiohttp_client(app)
+    async with client.get("/schema") as resp:
+        assert resp.ok
+        schema = await resp.json()
+
+    param = schema["paths"]["/foo"]["get"]["parameters"][0]
+    assert param["description"] == "Some description"
+    assert param["default"] == 42
+
+    async with client.get("/foo") as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == 42
+
+
 async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
