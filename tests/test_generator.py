@@ -354,7 +354,6 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result[1]["type"] == "string_type"
 
 
-
 async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
