@@ -314,16 +314,9 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
            "prefixItems": [{"type": "string"}, {"type": "integer"}, {"type": "number"}]}
     paths = {"/foo": {"get": {
         "operationId": "handler",
-        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {
-                            "contentMediaType": "application/json",
-                            "contentSchema": {"type": "integer"}, "type": "string"}},
-                       {"name": "bar", "in": "query", "required": False, "schema": {
-                            "contentMediaType": "application/json",
-                            "contentSchema": bar, "type": "string"}},
-                       {"name": "baz", "in": "query", "required": True, "schema": {
-                            "contentMediaType": "application/json",
-                            "contentSchema": {"$ref": "#/components/schemas/Baz"},
-                            "type": "string"}},
+        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {"type": "integer"}},
+                       {"name": "bar", "in": "query", "required": False, "schema": bar},
+                       {"name": "baz", "in": "query", "required": True, "schema": {"$ref": "#/components/schemas/Baz"}},
                        {"name": "spam", "in": "query", "required": False, "schema": {
                             "type": "string", "const": "eggz"}}],
         "responses": {
