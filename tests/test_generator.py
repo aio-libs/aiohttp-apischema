@@ -374,8 +374,8 @@ async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None
         schema = await resp.json()
 
     param = schema["paths"]["/foo"]["get"]["parameters"][0]
-    assert param["description"] == "Some description"
-    assert param["default"] == 42
+    assert param["schema"]["contentSchema"]["description"] == "Some description"
+    assert param["schema"]["default"] == 42
 
     async with client.get("/foo") as resp:
         assert resp.status == 200
