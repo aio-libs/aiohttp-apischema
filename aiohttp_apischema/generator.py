@@ -352,7 +352,7 @@ class SchemaGenerator:
                         # Strip qualifiers (Required/NotRequired) from param_type.
                         # TODO(PY311): (remove tuple) Annotated[insp.type, *insp.metadata]
                         param_type = Annotated[(insp.type, *insp.metadata)] if insp.metadata else insp.type
-                        models.append((key, "validation", TypeAdapter(ann_type)))
+                        models.append((key, "validation", TypeAdapter(param_type)))
 
                         # We also need to convert values to Json for runtime checking.
                         ann_type = param_type | Json[param_type]
