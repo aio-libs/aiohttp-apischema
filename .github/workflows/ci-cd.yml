@@ -22,7 +22,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v5
     - name: Setup Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.12
         cache: 'pip'
@@ -96,7 +96,7 @@ jobs:
         name: swagger-ui
         path: aiohttp_apischema/swagger-ui/
     - name: Setup Python ${{ matrix.pyver }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.pyver }}
         cache: 'pip'
@@ -147,7 +147,7 @@ jobs:
         name: swagger-ui
         path: aiohttp_apischema/swagger-ui/
     - name: Setup Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: 3.12
     - name: Install dependencies
