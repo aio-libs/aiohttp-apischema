@@ -357,7 +357,7 @@ class SchemaGenerator:
                         while get_origin(extracted_type) is Literal:
                             extracted_type = get_args(extracted_type)[0]
                         try:
-                            is_str = issubclass(extracted_type, str)
+                            is_str = issubclass(extracted_type, str)  # type: ignore[arg-type]
                         except TypeError:
                             is_str = isinstance(extracted_type, str)  # Literal
 
