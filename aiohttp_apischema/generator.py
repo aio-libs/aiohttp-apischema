@@ -184,7 +184,7 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
         if query_ta := ep_data.get("query"):
             try:
-                query = query_ta.validate_python(request.query, {"extra": "forbid"})
+                query = query_ta.validate_python(request.query, config={"extra": "forbid"})
             except ValidationError as e:
                 raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
             inner_handler = partial(inner_handler, query=query)
