@@ -353,6 +353,29 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result[1]["loc"] == ["bar", 0]
         assert result[1]["type"] == "string_type"
 
+
+async def test_wrong_query_args(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    class QueryArgs(TypedDict):
+        foo: int
+
+    @schema_gen.api()
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+        assert False
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/foo", handler)
+
+    client = await aiohttp_client(app)
+
+    async with client.get("/foo", params={"oof": 42}) as resp:
+        assert resp.status == 401
+        result = await resp.json()
+        assert result == 42
+
+
 async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
