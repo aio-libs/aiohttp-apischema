@@ -343,7 +343,7 @@ class SchemaGenerator:
                 if query := endpoints.get("query_raw"):
                     # We need separate schemas for each key of the TypedDict.
                     td = {}
-                    for param_name, param_type in get_type_hints(query, include_extras=True).items():
+                    for param_name, param_type in get_type_hints(query).items():
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
 
