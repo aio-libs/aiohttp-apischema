@@ -361,7 +361,7 @@ async def test_query_literal(aiohttp_client: AiohttpClient) -> None:
         foo: Literal[42, "spam"]
 
     @schema_gen.api()
-    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int | str]:
         return APIResponse(query["foo"])
 
     app = web.Application()
