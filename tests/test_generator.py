@@ -358,7 +358,7 @@ async def test_wrong_query_args(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
     class QueryArgs(TypedDict):
-        foo: int
+        foo: Annotated[int, Field(default=1)]
 
     @schema_gen.api()
     async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int]:
@@ -371,7 +371,7 @@ async def test_wrong_query_args(aiohttp_client: AiohttpClient) -> None:
     client = await aiohttp_client(app)
 
     async with client.get("/foo", params={"oof": 42}) as resp:
-        assert resp.status == 401
+        assert resp.status == 400
         result = await resp.json()
         assert result == 42
 
