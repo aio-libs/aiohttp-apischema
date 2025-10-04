@@ -13,6 +13,7 @@ from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
 from pydantic import Json, TypeAdapter, ValidationError
+from typing_inspection.introspection import AnnotationSource, inspect_annotation
 
 from aiohttp_apischema.response import APIResponse
 
@@ -347,8 +348,11 @@ class SchemaGenerator:
                         required = param_name in query.__required_keys__  # type: ignore[attr-defined]
                         key = (path, method, "parameter", (param_name, required))
 
-                        extracted_type = param_type
-                        while get_origin(extracted_type) in {Annotated, Literal, Required, NotRequired}:
+                        inspected_type = inspect_annotation(param_type, annotation_source=AnnotationSource.TYPED_DICT)
+                        # Strip qualifiers (Required/NotRequired) from param_type.
+                        param_type = Annotated[inspected_type.type, inspected_type.metadata]
+                        extracted_type = inspected_type.type
+                        while get_origin(extracted_type) is Literal:
                             extracted_type = get_args(extracted_type)[0]
                         try:
                             is_str = issubclass(extracted_type, str)
