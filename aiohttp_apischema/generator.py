@@ -184,7 +184,7 @@ def make_wrapper(ep_data: _EndpointData, wrapped: APIHandler[_Resp], handler: Ca
 
         if query_ta := ep_data.get("query"):
             try:
-                query = query_ta.validate_python(request.query, config={"extra": "forbid"})
+                query = query_ta.validate_python(request.query)
             except ValidationError as e:
                 raise web.HTTPBadRequest(text=e.json(), content_type="application/json")
             inner_handler = partial(inner_handler, query=query)
@@ -364,7 +364,7 @@ class SchemaGenerator:
                         ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
                         models.append((key, "validation", TypeAdapter(ann_type)))
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
-                    endpoints["query"] = TypeAdapter(TypedDict(query.__name__, td))  # type: ignore[attr-defined,operator]
+                    endpoints["query"] = TypeAdapter(TypedDict(query.__name__, td), {"extra": "forbid"})  # type: ignore[attr-defined,operator]
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
