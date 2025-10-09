@@ -364,7 +364,7 @@ class SchemaGenerator:
                         ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
                         models.append((key, "validation", TypeAdapter(ann_type)))
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
-                    endpoints["query"] = TypeAdapter(TypedDict(query.__name__, td), config={"extra": "forbid"})  # type: ignore[attr-defined,operator]
+                    endpoints["query"] = TypeAdapter(with_config({"extra": "forbid"})(TypedDict(query.__name__, td)))  # type: ignore[attr-defined,operator]
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
