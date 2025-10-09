@@ -12,7 +12,7 @@ from typing import (Any, Annotated, Concatenate, Generic, Iterable, Literal, Par
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
-from pydantic import Json, TypeAdapter, ValidationError
+from pydantic import Json, TypeAdapter, ValidationError, with_config
 from typing_inspection.introspection import AnnotationSource, inspect_annotation
 
 from aiohttp_apischema.response import APIResponse
@@ -364,7 +364,7 @@ class SchemaGenerator:
                         ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
                         models.append((key, "validation", TypeAdapter(ann_type)))
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
-                    endpoints["query"] = TypeAdapter(TypedDict(query.__name__, td))  # type: ignore[attr-defined,operator]
+                    endpoints["query"] = TypeAdapter(with_config({"extra": "forbid"})(TypedDict(query.__name__, td)))  # type: ignore[attr-defined,operator]
                 for code, model in endpoints["resps"].items():
                     key = (path, method, "response", code)
                     models.append((key, "serialization", model))
