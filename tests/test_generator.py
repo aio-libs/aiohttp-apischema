@@ -402,7 +402,7 @@ async def test_wrong_query_args(aiohttp_client: AiohttpClient) -> None:
     async with client.get("/foo", params={"oof": 42}) as resp:
         assert resp.status == 400
         result = await resp.json()
-        assert result == 42
+        assert result[0]["type"] == "extra_forbidden"
 
 
 async def test_extra_args(aiohttp_client: AiohttpClient) -> None:
