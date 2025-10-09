@@ -12,7 +12,7 @@ from typing import (Any, Annotated, Concatenate, Generic, Iterable, Literal, Par
 from aiohttp import web
 from aiohttp.hdrs import METH_ALL
 from aiohttp.typedefs import Handler
-from pydantic import Json, TypeAdapter, ValidationError
+from pydantic import Json, TypeAdapter, ValidationError, with_config
 from typing_inspection.introspection import AnnotationSource, inspect_annotation
 
 from aiohttp_apischema.response import APIResponse
