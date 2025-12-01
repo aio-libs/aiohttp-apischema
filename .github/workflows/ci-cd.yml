@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 5
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Setup Python
       uses: actions/setup-python@v6
       with:
@@ -89,7 +89,7 @@ jobs:
     timeout-minutes: 15
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Restore swagger-ui files
       uses: actions/download-artifact@v5
       with:
@@ -140,7 +140,7 @@ jobs:
       id-token: write  # Trusted publishing & sigstore
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Restore swagger-ui files
       uses: actions/download-artifact@v5
       with:
