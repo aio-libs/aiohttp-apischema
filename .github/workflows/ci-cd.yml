@@ -69,7 +69,7 @@ jobs:
       run: |
         sed -i -e 's/url:.*/url: document.getElementById("swagger-ui").dataset.url,/g' swagger-ui/swagger-initializer.js
     - name: Upload swagger-ui files
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: swagger-ui
         path: swagger-ui/
