@@ -352,17 +352,10 @@ class SchemaGenerator:
                         # Strip qualifiers (Required/NotRequired) from param_type.
                         # TODO(PY311): (remove tuple) Annotated[insp.type, *insp.metadata]
                         param_type = Annotated[(insp.type, *insp.metadata)] if insp.metadata else insp.type
-                        extracted_type = insp.type
-                        while get_origin(extracted_type) is Literal:
-                            extracted_type = get_args(extracted_type)[0]
-                        try:
-                            is_str = issubclass(extracted_type, str)  # type: ignore[arg-type]
-                        except TypeError:
-                            is_str = isinstance(extracted_type, str)  # Literal
+                        models.append((key, "validation", TypeAdapter(param_type)))
 
                         # We also need to convert values to Json for runtime checking.
-                        ann_type = param_type if is_str else Json[param_type]  # type: ignore[misc,valid-type]
-                        models.append((key, "validation", TypeAdapter(ann_type)))
+                        ann_type = param_type | Json[param_type]
                         td[param_name] = Required[ann_type] if required else NotRequired[ann_type]
                     endpoints["query"] = TypeAdapter(with_config({"extra": "forbid"})(TypedDict(query.__name__, td)))  # type: ignore[attr-defined,operator]
                 for code, model in endpoints["resps"].items():
