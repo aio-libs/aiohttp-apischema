@@ -314,16 +314,9 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
            "prefixItems": [{"type": "string"}, {"type": "integer"}, {"type": "number"}]}
     paths = {"/foo": {"get": {
         "operationId": "handler",
-        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {
-                            "contentMediaType": "application/json",
-                            "contentSchema": {"type": "integer"}, "type": "string"}},
-                       {"name": "bar", "in": "query", "required": False, "schema": {
-                            "contentMediaType": "application/json",
-                            "contentSchema": bar, "type": "string"}},
-                       {"name": "baz", "in": "query", "required": True, "schema": {
-                            "contentMediaType": "application/json",
-                            "contentSchema": {"$ref": "#/components/schemas/Baz"},
-                            "type": "string"}},
+        "parameters": [{"name": "foo", "in": "query", "required": True, "schema": {"type": "integer"}},
+                       {"name": "bar", "in": "query", "required": False, "schema": bar},
+                       {"name": "baz", "in": "query", "required": True, "schema": {"$ref": "#/components/schemas/Baz"}},
                        {"name": "spam", "in": "query", "required": False, "schema": {
                             "type": "string", "const": "eggz"}}],
         "responses": {
@@ -354,6 +347,32 @@ async def test_query(aiohttp_client: AiohttpClient) -> None:
         assert result[1]["type"] == "string_type"
 
 
+async def test_query_literal(aiohttp_client: AiohttpClient) -> None:
+    schema_gen = SchemaGenerator()
+
+    class QueryArgs(TypedDict):
+        foo: Literal[42, "spam"]
+
+    @schema_gen.api()
+    async def handler(request: web.Request, *, query: QueryArgs) -> APIResponse[int | str]:
+        return APIResponse(query["foo"])
+
+    app = web.Application()
+    schema_gen.setup(app)
+    app.router.add_get("/foo", handler)
+
+    client = await aiohttp_client(app)
+    async with client.get("/foo", params={"foo": 42}) as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == 42
+
+    async with client.get("/foo", params={"foo": "spam"}) as resp:
+        assert resp.status == 200
+        result = await resp.json()
+        assert result == "spam"
+
+
 async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None:
     schema_gen = SchemaGenerator()
 
@@ -374,7 +393,7 @@ async def test_query_pydantic_annotations(aiohttp_client: AiohttpClient) -> None
         schema = await resp.json()
 
     param = schema["paths"]["/foo"]["get"]["parameters"][0]
-    assert param["schema"]["contentSchema"]["description"] == "Some description"
+    assert param["schema"]["description"] == "Some description"
     assert param["schema"]["default"] == 42
 
     async with client.get("/foo") as resp:
